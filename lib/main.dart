@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:window_manager/window_manager.dart';
+import 'package:windows_single_instance/windows_single_instance.dart';
 
 import 'config/app_config.dart';
 import 'core/audio/audio_service.dart';
@@ -15,6 +17,7 @@ import 'core/storage/secure_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/responsive.dart';
 import 'core/router/app_router.dart';
+import 'core/utils/window_tray_manager.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 
 /// 全局 AudioHandler Provider
@@ -22,14 +25,28 @@ final audioHandlerProvider = Provider<SongloftAudioHandler>((ref) {
   throw UnimplementedError('audioHandlerProvider must be overridden');
 });
 
-void main() async {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isWindows) {
+    await WindowsSingleInstance.ensureSingleInstance(
+      args,
+      "songloft_player_instance",
+      onSecondWindow: (List<String> args) {
+        windowManager.show();
+        windowManager.focus();
+      },
+    );
+  }
 
   // Windows 和 Linux 平台需要 media_kit 作为 just_audio 的后端
   // 必须在 AudioService.init() 之前调用
   if (!kIsWeb) {
     JustAudioMediaKit.ensureInitialized();
   }
+
+  // 初始化 Windows 系统托盘与拦截关闭事件
+  await WindowTrayManager.setup();
 
   // 全局异常处理，防止未捕获异常导致白屏
   FlutterError.onError = (FlutterErrorDetails details) {
