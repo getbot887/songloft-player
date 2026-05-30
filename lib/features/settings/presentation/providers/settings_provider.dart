@@ -12,6 +12,7 @@ import '../../data/directory_api.dart';
 import '../../data/scan_api.dart';
 import '../../data/frontend_version_api.dart';
 import '../../data/upgrade_api.dart';
+import '../../../playlist/presentation/providers/playlist_provider.dart';
 
 // ============================================================================
 // API Providers
@@ -207,11 +208,15 @@ class ScanProgressNotifier extends Notifier<ScanProgress> {
   /// 刷新进度
   Future<void> refreshProgress() async {
     try {
+      final previousStatus = state.status;
       state = await _scanApi.getProgress();
 
       // 如果扫描完成或出错，停止轮询
       if (state.isCompleted || state.isError || state.isCancelled) {
         _stopPolling();
+        if (state.isCompleted && previousStatus != 'completed') {
+          ref.invalidate(playlistListProvider);
+        }
       }
     } catch (e) {
       // 获取进度失败忽略
