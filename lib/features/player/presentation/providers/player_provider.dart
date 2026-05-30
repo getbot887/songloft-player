@@ -8,6 +8,7 @@ import 'package:just_audio/just_audio.dart' as ja;
 import 'package:volume_controller/volume_controller.dart';
 
 import '../../../../core/audio/audio_service.dart';
+import '../../../../core/utils/platform_utils.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/secure_storage.dart';
 import '../../../../core/utils/url_helper.dart';
@@ -78,6 +79,9 @@ class PlayerNotifier extends Notifier<PlayerState> {
     return PlayerState.initial;
   }
 
+  /// 是否使用系统音量控制（仅移动端）
+  bool get _useSystemVolume => !kIsWeb && PlatformUtils.isMobile;
+
   /// 从本地存储加载播放器偏好设置
   Future<void> _loadPreferences() async {
     try {
@@ -90,19 +94,21 @@ class PlayerNotifier extends Notifier<PlayerState> {
       // 更新播放模式
       state = state.copyWith(playMode: playMode);
 
-      // 加载系统音量（非 Web 平台）
-      if (!kIsWeb) {
+      if (_useSystemVolume) {
+        // 移动平台：加载系统音量，just_audio 固定最大
         VolumeController().showSystemUI = false;
         final systemVolume = await VolumeController().getVolume();
         state = state.copyWith(volume: (systemVolume * 100).clamp(0.0, 100.0));
+        await _audioHandler.setVolume(1.0);
+      } else {
+        // 桌面/Web 平台：使用 just_audio 播放器音量
+        final savedVolume = prefs.getVolume();
+        state = state.copyWith(volume: savedVolume.clamp(0.0, 100.0));
+        await _audioHandler.setVolume(state.volume / 100);
       }
-
-      // 固定 just_audio 播放器音量为最大
-      await _audioHandler.setVolume(1.0);
     } catch (e) {
       debugPrint('[Player] Failed to load preferences: $e');
-      // 加载失败使用默认值，仍然固定 just_audio 音量
-      await _audioHandler.setVolume(1.0);
+      await _audioHandler.setVolume(state.volume / 100);
     }
   }
 
@@ -135,8 +141,8 @@ class PlayerNotifier extends Notifier<PlayerState> {
     });
     // 歌曲结束通过 _audioHandler.onSongCompleted 回调处理
 
-    // 监听系统音量变化（非 Web 平台）
-    if (!kIsWeb) {
+    // 监听系统音量变化（仅移动平台）
+    if (_useSystemVolume) {
       _systemVolumeSubscription = VolumeController().listener((volume) {
         // volume 是 0.0-1.0，转换为 0-100
         final volumePercent = (volume * 100).clamp(0.0, 100.0);
@@ -406,8 +412,8 @@ class PlayerNotifier extends Notifier<PlayerState> {
     final clampedVolume = volume.clamp(0.0, 100.0);
     state = state.copyWith(volume: clampedVolume, clearPreviousVolume: true);
 
-    if (!kIsWeb) {
-      // 非 Web 平台：控制系统音量
+    if (_useSystemVolume) {
+      // 移动平台：控制系统音量
       try {
         VolumeController().setVolume(clampedVolume / 100);
         debugPrint('[Player] Set system volume: ${clampedVolume / 100}');
@@ -415,11 +421,18 @@ class PlayerNotifier extends Notifier<PlayerState> {
         debugPrint('[Player] Failed to set system volume: $e');
       }
     } else {
-      // Web 平台降级：使用 just_audio 播放器音量
+      // 桌面/Web 平台：使用 just_audio 播放器音量
       await _audioHandler.setVolume(clampedVolume / 100);
-      debugPrint(
-        '[Player] Set player volume (web fallback): ${clampedVolume / 100}',
-      );
+      debugPrint('[Player] Set player volume: ${clampedVolume / 100}');
+      // 桌面平台持久化音量设置
+      if (!kIsWeb) {
+        try {
+          final prefs = await ref.read(appPreferencesProvider.future);
+          await prefs.setVolume(clampedVolume);
+        } catch (e) {
+          debugPrint('[Player] Failed to save volume: $e');
+        }
+      }
     }
   }
 
@@ -952,11 +965,12 @@ class PlayerNotifier extends Notifier<PlayerState> {
         await _secureStorage.getAccessToken();
         debugPrint('[Player] _playCurrent: calling audioHandler.playSong');
         await _audioHandler.playSong(song);
-        // 固定 just_audio 播放器音量为最大（音量由系统控制）
-        if (kIsWeb) {
-          await _audioHandler.setVolume(state.volume / 100);
-        } else {
+        // 移动平台：音量由系统控制，just_audio 固定最大
+        // 桌面/Web：使用 just_audio 播放器音量
+        if (_useSystemVolume) {
           await _audioHandler.setVolume(1.0);
+        } else {
+          await _audioHandler.setVolume(state.volume / 100);
         }
         debugPrint('[Player] _playCurrent: playback started successfully');
 
