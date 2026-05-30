@@ -1,14 +1,19 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/app_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../shared/utils/responsive_snackbar.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
+import '../../playlist/presentation/providers/playlist_provider.dart';
 import 'widgets/cache_manager.dart';
 import '../../../features/jsplugin/presentation/widgets/jsplugin_manager.dart';
 import 'widgets/scan_manager.dart';
@@ -117,6 +122,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
           const SizedBox(height: 16),
 
+          // 分组: 数据管理
+          _buildSectionCard(
+            title: '数据管理',
+            icon: Icons.backup_outlined,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.file_download_outlined),
+                title: const Text('导出歌单'),
+                subtitle: const Text('将所有歌单数据备份为 JSON 文件'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _exportPlaylists,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.file_upload_outlined),
+                title: const Text('导入歌单'),
+                subtitle: const Text('从 JSON 备份文件还原歌单数据'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _importPlaylists,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
           // 分组6: 系统
           _buildSectionCard(
             title: '系统',
@@ -172,6 +202,91 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _exportPlaylists() async {
+    final token = SecureStorageService.cachedAccessToken;
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      ResponsiveSnackBar.showError(context, message: '未登录，无法导出');
+      return;
+    }
+    final url =
+        '${AppConfig.baseUrl}${AppConfig.apiPrefix}/playlists/export?access_token=$token';
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (!mounted) return;
+      ResponsiveSnackBar.showError(context, message: '导出失败: $e');
+    }
+  }
+
+  Future<void> _importPlaylists() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        withData: kIsWeb,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.single;
+      late final MultipartFile multipartFile;
+
+      if (kIsWeb) {
+        if (file.bytes == null) {
+          if (!mounted) return;
+          ResponsiveSnackBar.showError(context, message: '无法读取文件内容');
+          return;
+        }
+        multipartFile = MultipartFile.fromBytes(
+          file.bytes!,
+          filename: file.name,
+        );
+      } else {
+        if (file.path == null) {
+          if (!mounted) return;
+          ResponsiveSnackBar.showError(context, message: '无法获取文件路径');
+          return;
+        }
+        multipartFile = await MultipartFile.fromFile(
+          file.path!,
+          filename: file.name,
+        );
+      }
+
+      final formData = FormData.fromMap({'file': multipartFile});
+      final dio = ref.read(dioProvider);
+      final response = await dio.post(
+        '${AppConfig.apiPrefix}/playlists/import',
+        data: formData,
+      );
+
+      if (!mounted) return;
+      final data = response.data as Map<String, dynamic>;
+      final created = data['playlists_created'] ?? 0;
+      final merged = data['playlists_merged'] ?? 0;
+      final songsCreated = data['songs_created'] ?? 0;
+      final songsMatched = data['songs_matched'] ?? 0;
+
+      ResponsiveSnackBar.show(
+        context,
+        message: '导入完成: 新建歌单 $created, 合并歌单 $merged, '
+            '新建歌曲 $songsCreated, 匹配歌曲 $songsMatched',
+      );
+
+      ref.invalidate(playlistListProvider);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['error'] as String?;
+      ResponsiveSnackBar.showError(
+        context,
+        message: '导入失败: ${detail ?? e.message}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ResponsiveSnackBar.showError(context, message: '导入失败: $e');
+    }
   }
 
   Future<void> _showLogoutDialog() async {
