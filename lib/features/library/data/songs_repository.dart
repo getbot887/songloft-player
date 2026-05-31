@@ -66,7 +66,6 @@ class SongsRepository {
     String? artist,
     required String url,
     String? coverUrl,
-    bool isLive = false,
   }) async {
     try {
       return await songsApi.createRadioSong(
@@ -74,7 +73,6 @@ class SongsRepository {
         artist: artist,
         url: url,
         coverUrl: coverUrl,
-        isLive: isLive,
       );
     } on DioException catch (e) {
       throw _handleError(e);

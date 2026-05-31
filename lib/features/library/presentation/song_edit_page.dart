@@ -26,7 +26,6 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
   late final TextEditingController _urlController;
   late final TextEditingController _coverUrlController;
   late final TextEditingController _durationController;
-  late bool _isLive;
   bool _isSubmitting = false;
 
   bool get isEditMode => widget.song != null;
@@ -38,14 +37,15 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
     _titleController = TextEditingController(text: widget.song?.title ?? '');
     _artistController = TextEditingController(text: widget.song?.artist ?? '');
     _albumController = TextEditingController(text: widget.song?.album ?? '');
-    _urlController = TextEditingController(text: widget.song?.url ?? '');
+    _urlController = TextEditingController(
+      text: widget.song?.sourceUrl ?? widget.song?.url ?? '',
+    );
     _coverUrlController = TextEditingController(
       text: widget.song?.coverUrl ?? '',
     );
     _durationController = TextEditingController(
       text: widget.song?.duration.toStringAsFixed(0) ?? '',
     );
-    _isLive = widget.song?.isLive ?? false;
   }
 
   @override
@@ -184,21 +184,6 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
                 const SizedBox(height: 16),
               ],
 
-              // 直播流（仅电台）
-              if (isRadio) ...[
-                SwitchListTile(
-                  title: const Text('直播流'),
-                  subtitle: const Text('开启后表示这是一个直播电台'),
-                  value: _isLive,
-                  onChanged: (value) {
-                    setState(() {
-                      _isLive = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
-
               // 封面预览
               if (_coverUrlController.text.isNotEmpty) ...[
                 const Text('封面预览：'),
@@ -261,7 +246,7 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
                   : _coverUrlController.text.trim(),
           duration:
               isRadio ? null : (double.tryParse(_durationController.text)),
-          isLive: isRadio ? _isLive : null,
+          isLive: null,
         );
       } else if (isRadio) {
         // 创建电台
@@ -276,7 +261,6 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
               _coverUrlController.text.trim().isEmpty
                   ? null
                   : _coverUrlController.text.trim(),
-          isLive: _isLive,
         );
       } else {
         // 创建网络歌曲

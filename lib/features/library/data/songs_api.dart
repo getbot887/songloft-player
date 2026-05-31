@@ -93,7 +93,6 @@ class SongsApi {
     String? artist,
     required String url,
     String? coverUrl,
-    bool isLive = false,
   }) async {
     final songs = await createRadioSongs([
       {
@@ -101,7 +100,6 @@ class SongsApi {
         'artist': artist,
         'url': url,
         'cover_url': coverUrl,
-        'is_live': isLive,
       },
     ]);
     return songs.first;

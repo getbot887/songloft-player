@@ -217,11 +217,13 @@ class PlayerNotifier extends Notifier<PlayerState> {
     _playerStateSubscription = _audioHandler.playerStateStream.listen((
       playerState,
     ) {
+      final isLive = state.currentSong?.isLive ?? false;
       state = state.copyWith(
         isPlaying: playerState.playing,
         isBuffering:
-            playerState.processingState == ja.ProcessingState.buffering ||
-            playerState.processingState == ja.ProcessingState.loading,
+            playerState.processingState == ja.ProcessingState.loading ||
+            (playerState.processingState == ja.ProcessingState.buffering &&
+            !isLive),
       );
     });
     // 歌曲结束通过 _audioHandler.onSongCompleted 回调处理
@@ -404,8 +406,13 @@ class PlayerNotifier extends Notifier<PlayerState> {
     }
 
     if (state.isPlaying) {
-      debugPrint('[Player] togglePlay: pausing');
-      await _audioHandler.pause();
+      if (state.currentSong?.isLive ?? false) {
+        debugPrint('[Player] togglePlay: stopping live stream');
+        await _audioHandler.stop();
+      } else {
+        debugPrint('[Player] togglePlay: pausing');
+        await _audioHandler.pause();
+      }
     } else {
       // 如果播放器处于 idle 状态（无音频源，如后台播放失败后），
       // 需要重新加载当前歌曲而不是简单调用 play()

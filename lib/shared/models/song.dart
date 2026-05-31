@@ -14,6 +14,7 @@ class Song {
   final String? format;
   final int bitRate;
   final int sampleRate;
+  final String? sourceUrl;
   final bool isLive;
   final DateTime addedAt;
   final DateTime updatedAt;
@@ -33,6 +34,7 @@ class Song {
     this.format,
     this.bitRate = 0,
     this.sampleRate = 0,
+    this.sourceUrl,
     this.isLive = false,
     required this.addedAt,
     required this.updatedAt,
@@ -54,6 +56,7 @@ class Song {
       format: json['format'] as String?,
       bitRate: json['bit_rate'] as int? ?? 0,
       sampleRate: json['sample_rate'] as int? ?? 0,
+      sourceUrl: json['source_url'] as String?,
       isLive: json['is_live'] as bool? ?? false,
       addedAt:
           json['added_at'] != null
@@ -82,6 +85,7 @@ class Song {
       'format': format,
       'bit_rate': bitRate,
       'sample_rate': sampleRate,
+      'source_url': sourceUrl,
       'is_live': isLive,
       'added_at': addedAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -103,6 +107,7 @@ class Song {
     String? format,
     int? bitRate,
     int? sampleRate,
+    String? sourceUrl,
     bool? isLive,
     DateTime? addedAt,
     DateTime? updatedAt,
@@ -122,6 +127,7 @@ class Song {
       format: format ?? this.format,
       bitRate: bitRate ?? this.bitRate,
       sampleRate: sampleRate ?? this.sampleRate,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
       isLive: isLive ?? this.isLive,
       addedAt: addedAt ?? this.addedAt,
       updatedAt: updatedAt ?? this.updatedAt,
