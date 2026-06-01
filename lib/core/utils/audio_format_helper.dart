@@ -12,7 +12,7 @@ class AudioFormatHelper {
     'mp3', 'flac', 'm4a', 'aac', 'wav', 'alac', 'aiff',
   };
   static const _androidFormats = {
-    'mp3', 'flac', 'ogg', 'm4a', 'aac', 'wav', 'opus', 'wma',
+    'mp3', 'flac', 'ogg', 'm4a', 'aac', 'wav', 'opus',
   };
 
   static String? getTranscodeFormat(String? songFormat) {
