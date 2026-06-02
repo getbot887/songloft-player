@@ -217,13 +217,14 @@ class _LyricsViewState extends State<LyricsView> {
   }
 
   /// 滚动到指定歌词行
+  ///
+  /// 配合下方 ListView 使用 `(viewportHeight - _lineHeight) / 2` 的上下 padding，
+  /// 索引 i 行的中心刚好位于 offset = `i * _lineHeight` + viewport 中线处，
+  /// 因此目标 offset 直接等于 `index * _lineHeight`，首尾行也能居中。
   void _scrollToLine(int index) {
     if (!_scrollController.hasClients) return;
 
-    // 计算目标偏移量（将当前行滚动到视图中央）
-    final viewportHeight = _scrollController.position.viewportDimension;
-    final targetOffset =
-        (index * _lineHeight) - (viewportHeight / 2) + (_lineHeight / 2);
+    final targetOffset = index * _lineHeight;
     final clampedOffset = targetOffset.clamp(
       0.0,
       _scrollController.position.maxScrollExtent,
@@ -316,55 +317,68 @@ class _LyricsViewState extends State<LyricsView> {
       );
     }
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollStartNotification) {
-          // 用户开始滚动
-          if (notification.dragDetails != null) {
-            _onUserScrollStart();
-          }
-        }
-        return false;
-      },
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 24),
-        itemCount: _lyrics.length,
-        itemBuilder: (context, index) {
-          final lyric = _lyrics[index];
-          final isCurrent = index == _currentLineIndex;
-
-          return GestureDetector(
-            onTap: () {
-              // 点击歌词行跳转到对应时间点
-              if (widget.onSeek != null) {
-                widget.onSeek!(lyric.time);
-                // 恢复自动滚动状态
-                _isUserScrolling = false;
-                _resumeTimer?.cancel();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 上下 padding = (视口高度 - 行高) / 2，让任意一行（含首尾）都能滚到视图正中央
+        final verticalPadding = ((constraints.maxHeight - _lineHeight) / 2)
+            .clamp(0.0, double.infinity);
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollStartNotification) {
+              // 用户开始滚动
+              if (notification.dragDetails != null) {
+                _onUserScrollStart();
               }
-            },
-            child: Container(
-              height: _lineHeight,
-              alignment: Alignment.center,
-              child: Text(
-                lyric.text.isEmpty ? '...' : lyric.text,
-                style: TextStyle(
-                  fontSize: isCurrent ? 18 : 15,
-                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                  color:
-                      isCurrent
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+            }
+            return false;
+          },
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: EdgeInsets.symmetric(
+              vertical: verticalPadding,
+              horizontal: 24,
             ),
-          );
-        },
-      ),
+            itemCount: _lyrics.length,
+            itemBuilder: (context, index) {
+              final lyric = _lyrics[index];
+              final isCurrent = index == _currentLineIndex;
+
+              return GestureDetector(
+                onTap: () {
+                  // 点击歌词行跳转到对应时间点
+                  if (widget.onSeek != null) {
+                    widget.onSeek!(lyric.time);
+                    // 恢复自动滚动状态
+                    _isUserScrolling = false;
+                    _resumeTimer?.cancel();
+                  }
+                },
+                child: Container(
+                  height: _lineHeight,
+                  alignment: Alignment.center,
+                  child: Text(
+                    lyric.text.isEmpty ? '...' : lyric.text,
+                    style: TextStyle(
+                      fontSize: isCurrent ? 18 : 15,
+                      fontWeight:
+                          isCurrent ? FontWeight.bold : FontWeight.normal,
+                      color:
+                          isCurrent
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
