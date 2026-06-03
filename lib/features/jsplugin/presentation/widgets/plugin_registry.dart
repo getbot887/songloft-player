@@ -226,13 +226,14 @@ class _PluginRegistryDialogState extends ConsumerState<_PluginRegistryDialog> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<PluginRegistryConfig>(
-                      initialValue: _selectedRegistry,
+                      value: _selectedRegistry,
                       decoration: const InputDecoration(
                         labelText: '订阅源',
                         border: OutlineInputBorder(),
                         contentPadding:
                             EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
+                      isExpanded: true,
                       items: enabledRegistries
                           .map(
                             (r) => DropdownMenuItem(
@@ -248,24 +249,41 @@ class _PluginRegistryDialogState extends ConsumerState<_PluginRegistryDialog> {
                       onChanged: _onRegistryChanged,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedProxy,
-                      icon: const Icon(Icons.vpn_key_outlined),
-                      items: _kGithubProxies
-                          .map(
-                            (p) => DropdownMenuItem(
-                              value: p.value,
-                              child: Text(p.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        setState(() => _selectedProxy = v ?? '');
-                        _refreshPlugins();
-                      },
+                  const SizedBox(width: 4),
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.vpn_key_outlined,
+                      color: _selectedProxy.isEmpty
+                          ? null
+                          : Theme.of(context).colorScheme.primary,
                     ),
+                    tooltip: '选择 GitHub 代理',
+                    onSelected: (v) {
+                      setState(() => _selectedProxy = v);
+                      _refreshPlugins();
+                    },
+                    itemBuilder: (context) => _kGithubProxies
+                        .map(
+                          (p) => PopupMenuItem(
+                            value: p.value,
+                            child: Row(
+                              children: [
+                                if (_selectedProxy == p.value)
+                                  Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  )
+                                else
+                                  const SizedBox(width: 18),
+                                const SizedBox(width: 8),
+                                Text(p.label),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
