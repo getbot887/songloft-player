@@ -239,6 +239,7 @@ class _PluginRegistryDialogState extends ConsumerState<_PluginRegistryDialog> {
                               value: r,
                               child: Text(
                                 r.name.isEmpty ? r.url : r.name,
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -719,11 +720,13 @@ class _RegistryManagementDialogState
                       ),
                       title: Text(
                         r.name.isNotEmpty ? r.name : r.url,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: r.name.isNotEmpty
                           ? Text(
                               r.url,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall,
                             )
