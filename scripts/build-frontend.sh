@@ -179,6 +179,26 @@ build_web() {
         echo -e "${GREEN}✓ [Web]${NC} 已清理未使用的渲染器变体"
     fi
 
+    # 字体瘦身：移除 pubspec.yaml 声明的 NotoSansSC OTF（8 MB eager loading），
+    # CanvasKit 通过 fonts/notosanssc/ 下的 woff2 分片按需加载中文字符，渲染效果一致
+    local noto_otf="$output/assets/fonts/NotoSansSC-Regular.otf"
+    if [ -f "$noto_otf" ]; then
+        rm -f "$noto_otf"
+        # 从 FontManifest.json 移除 NotoSansSC 条目，避免 Flutter 尝试加载已删除的文件
+        local manifest="$output/assets/FontManifest.json"
+        if [ -f "$manifest" ]; then
+            python3 -c "
+import json, sys
+with open('$manifest') as f:
+    data = json.load(f)
+data = [e for e in data if e.get('family') != 'NotoSansSC']
+with open('$manifest', 'w') as f:
+    json.dump(data, f)
+" 2>/dev/null || echo -e "${YELLOW}⚠ [Web]${NC} FontManifest.json 更新失败，字体文件已删除但清单未同步"
+        fi
+        echo -e "${GREEN}✓ [Web]${NC} 已移除冗余 NotoSansSC OTF 字体（-8 MB），使用 CanvasKit woff2 按需加载"
+    fi
+
     echo -e "${GREEN}✓ [Web]${NC} Web ${mode} 构建完成 → $output"
 }
 
