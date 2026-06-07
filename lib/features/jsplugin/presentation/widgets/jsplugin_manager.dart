@@ -442,6 +442,7 @@ class _JSPluginItem extends ConsumerStatefulWidget {
 class _JSPluginItemState extends ConsumerState<_JSPluginItem> {
   bool _isToggling = false;
   bool _isDeleting = false;
+  bool _isForceUpdating = false;
 
   Future<void> _togglePlugin() async {
     setState(() => _isToggling = true);
@@ -487,6 +488,40 @@ class _JSPluginItemState extends ConsumerState<_JSPluginItem> {
         onUpdateComplete: () => ref.invalidate(jsPluginsProvider),
       ),
     );
+  }
+
+  Future<void> _showForceUpdateDialog() async {
+    final proxy = await showDialog<String>(
+      context: context,
+      builder: (context) => _ForceUpdateConfirmDialog(
+        pluginName: widget.plugin.displayName,
+      ),
+    );
+    if (proxy == null || !mounted) return;
+
+    setState(() => _isForceUpdating = true);
+    try {
+      final api = ref.read(jsPluginApiProvider);
+      await api.updatePlugin(
+        widget.plugin.id,
+        githubProxy: proxy.isNotEmpty ? proxy : null,
+        force: true,
+      );
+      ref.invalidate(jsPluginsProvider);
+      if (mounted) {
+        ResponsiveSnackBar.showSuccess(context, message: '插件已强制更新');
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ResponsiveSnackBar.showError(context, message: '强制更新失败: ${e.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ResponsiveSnackBar.showError(context, message: '强制更新失败: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isForceUpdating = false);
+    }
   }
 
   Future<void> _deletePlugin() async {
@@ -724,6 +759,8 @@ class _JSPluginItemState extends ConsumerState<_JSPluginItem> {
                 _openHomepage(plugin.homepage!);
               case 'update':
                 _showUpdateDialog();
+              case 'force_update':
+                _showForceUpdateDialog();
               case 'delete':
                 _deletePlugin();
             }
@@ -747,6 +784,23 @@ class _JSPluginItemState extends ConsumerState<_JSPluginItem> {
                   child: ListTile(
                     leading: Icon(Icons.system_update_alt),
                     title: Text('检查更新'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'force_update',
+                  enabled: !_isForceUpdating,
+                  child: ListTile(
+                    leading:
+                        _isForceUpdating
+                            ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.refresh),
+                    title: const Text('强制更新'),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -782,10 +836,44 @@ class _JSPluginItemState extends ConsumerState<_JSPluginItem> {
     // 桌面端
     return [
       switchOrLoader,
-      IconButton(
-        icon: const Icon(Icons.system_update_alt),
-        onPressed: _showUpdateDialog,
-        tooltip: '检查更新',
+      PopupMenuButton<String>(
+        icon:
+            _isForceUpdating
+                ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                : const Icon(Icons.system_update_alt),
+        tooltip: '更新',
+        onSelected: (value) {
+          switch (value) {
+            case 'update':
+              _showUpdateDialog();
+            case 'force_update':
+              _showForceUpdateDialog();
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem<String>(
+            value: 'update',
+            child: ListTile(
+              leading: Icon(Icons.system_update_alt),
+              title: Text('检查更新'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const PopupMenuItem<String>(
+            value: 'force_update',
+            child: ListTile(
+              leading: Icon(Icons.refresh),
+              title: Text('强制更新'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
       ),
       IconButton(
         icon:
@@ -1507,5 +1595,140 @@ class _JSPluginBatchUpdateDialogState
         child: const Text('开始更新'),
       ),
     ];
+  }
+}
+
+/// 强制更新确认对话框：选择代理后返回代理字符串，取消返回 null
+class _ForceUpdateConfirmDialog extends StatefulWidget {
+  final String pluginName;
+
+  const _ForceUpdateConfirmDialog({required this.pluginName});
+
+  @override
+  State<_ForceUpdateConfirmDialog> createState() =>
+      _ForceUpdateConfirmDialogState();
+}
+
+class _ForceUpdateConfirmDialogState extends State<_ForceUpdateConfirmDialog> {
+  int _selectedProxyIndex = 0;
+  final TextEditingController _customProxyController = TextEditingController();
+
+  String get _effectiveProxy {
+    if (_selectedProxyIndex == -1) {
+      return _customProxyController.text.trim();
+    }
+    if (_selectedProxyIndex >= 0 &&
+        _selectedProxyIndex < _kGithubProxies.length) {
+      return _kGithubProxies[_selectedProxyIndex].value;
+    }
+    return '';
+  }
+
+  @override
+  void dispose() {
+    _customProxyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Icon(Icons.refresh),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '强制更新 - ${widget.pluginName}',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: context.responsiveDialogMaxWidth,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '将忽略版本检查，重新下载并安装插件。',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('GitHub 代理', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              RadioGroup<int>(
+                groupValue: _selectedProxyIndex,
+                onChanged: (value) {
+                  if (value != null) setState(() => _selectedProxyIndex = value);
+                },
+                child: Column(
+                  children: [
+                    ...List.generate(_kGithubProxies.length, (index) {
+                      final proxy = _kGithubProxies[index];
+                      return RadioListTile<int>(
+                        title: Text(proxy.label, style: theme.textTheme.bodyMedium),
+                        value: index,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      );
+                    }),
+                    RadioListTile<int>(
+                      title: Text('自定义代理', style: theme.textTheme.bodyMedium),
+                      value: -1,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+              ),
+              if (_selectedProxyIndex == -1)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, top: 4),
+                  child: TextField(
+                    controller: _customProxyController,
+                    decoration: const InputDecoration(
+                      hintText: 'https://your-proxy.com/',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          style: TextButton.styleFrom(
+            minimumSize: context.responsiveButtonMinSize,
+          ),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _effectiveProxy),
+          style: FilledButton.styleFrom(
+            minimumSize: context.responsiveButtonMinSize,
+          ),
+          child: const Text('确认更新'),
+        ),
+      ],
+    );
   }
 }

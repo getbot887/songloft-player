@@ -447,11 +447,18 @@ class JSPluginApi {
 
   /// 执行 JS 插件更新
   /// POST /api/v1/jsplugins/{id}/update
-  Future<void> updatePlugin(int id, {String? githubProxy}) async {
+  Future<void> updatePlugin(
+    int id, {
+    String? githubProxy,
+    bool force = false,
+  }) async {
     try {
       final body = <String, dynamic>{};
       if (githubProxy != null && githubProxy.isNotEmpty) {
         body['github_proxy'] = githubProxy;
+      }
+      if (force) {
+        body['force'] = true;
       }
       await dio.post('${AppConfig.apiPrefix}/jsplugins/$id/update', data: body);
     } on DioException catch (e) {
@@ -463,11 +470,15 @@ class JSPluginApi {
   /// POST /api/v1/jsplugins/update-all
   Future<JSPluginBatchUpdateResponse> updateAllPlugins({
     String? githubProxy,
+    bool force = false,
   }) async {
     try {
       final body = <String, dynamic>{};
       if (githubProxy != null && githubProxy.isNotEmpty) {
         body['github_proxy'] = githubProxy;
+      }
+      if (force) {
+        body['force'] = true;
       }
       final response = await dio.post(
         '${AppConfig.apiPrefix}/jsplugins/update-all',

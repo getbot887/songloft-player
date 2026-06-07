@@ -668,11 +668,14 @@ class _RegistryPluginItemState extends ConsumerState<_RegistryPluginItem> {
       );
     }
     if (entry.installed && !entry.hasUpdate) {
-      return Chip(
+      return ActionChip(
+        avatar: const Icon(Icons.refresh, size: 16),
         label: Text('v${entry.installedVersion ?? entry.version}'),
         backgroundColor: theme.colorScheme.surfaceContainerHighest,
         side: BorderSide.none,
         visualDensity: VisualDensity.compact,
+        tooltip: '重新安装',
+        onPressed: _install,
       );
     }
     if (entry.installed && entry.hasUpdate) {

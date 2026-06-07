@@ -10,7 +10,6 @@ import '../../../../core/storage/secure_storage.dart';
 import '../../../../core/theme/responsive.dart';
 import '../../data/jsplugin_api.dart';
 import '../providers/jsplugin_provider.dart';
-import '../../../home/presentation/plugin_theme_utils.dart';
 
 /// JS 插件入口网格组件
 class JSPluginGrid extends ConsumerWidget {
