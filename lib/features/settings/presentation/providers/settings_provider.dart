@@ -353,42 +353,6 @@ final autoCreatePlaylistsProvider =
     );
 
 // ============================================================================
-// Auto-Create Playlists Provider
-// ============================================================================
-
-/// 「扫描后自动创建歌单」总开关 Notifier。
-/// 开启后扫描会按目录结构自动生成歌单；关闭后仅导入歌曲不创建歌单。
-/// 业务端点：GET/PUT /api/v1/settings/scan-auto-create-playlists
-class AutoCreatePlaylistsNotifier extends AsyncNotifier<bool> {
-  @override
-  Future<bool> build() async {
-    final api = ref.watch(settingsApiProvider);
-    try {
-      return await api.getScanAutoCreatePlaylists();
-    } catch (_) {
-      return true;
-    }
-  }
-
-  Future<void> setValue(bool value) async {
-    state = AsyncValue.data(value);
-    try {
-      final api = ref.read(settingsApiProvider);
-      await api.setScanAutoCreatePlaylists(value);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-      rethrow;
-    }
-  }
-}
-
-/// 「扫描后自动创建歌单」Provider
-final autoCreatePlaylistsProvider =
-    AsyncNotifierProvider<AutoCreatePlaylistsNotifier, bool>(
-      AutoCreatePlaylistsNotifier.new,
-    );
-
-// ============================================================================
 // Auto-Create Playlists Include Subdirs Provider
 // ============================================================================
 

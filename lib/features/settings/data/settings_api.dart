@@ -246,31 +246,6 @@ class SettingsApi {
     }
   }
 
-  // ---------- 扫描后自动创建歌单（按目录结构生成歌单） ----------
-
-  Future<bool> getScanAutoCreatePlaylists() async {
-    try {
-      final response = await dio.get(
-        '${AppConfig.apiPrefix}/settings/scan-auto-create-playlists',
-      );
-      final data = response.data as Map<String, dynamic>;
-      return data['enabled'] as bool? ?? true;
-    } on DioException catch (e) {
-      throw ApiException.fromDioException(e);
-    }
-  }
-
-  Future<void> setScanAutoCreatePlaylists(bool enabled) async {
-    try {
-      await dio.put(
-        '${AppConfig.apiPrefix}/settings/scan-auto-create-playlists',
-        data: {'enabled': enabled},
-      );
-    } on DioException catch (e) {
-      throw ApiException.fromDioException(e);
-    }
-  }
-
   // ---------- 扫描后自动创建歌单是否包含子目录 ----------
 
   Future<bool> getScanAutoCreateIncludeSubdirs() async {
