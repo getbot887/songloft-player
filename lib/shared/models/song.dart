@@ -16,6 +16,7 @@ class Song {
   final int bitRate;
   final int sampleRate;
   final String? sourceUrl;
+  final String? sourceCoverUrl;
   final bool isLive;
   final DateTime addedAt;
   final DateTime updatedAt;
@@ -37,6 +38,7 @@ class Song {
     this.bitRate = 0,
     this.sampleRate = 0,
     this.sourceUrl,
+    this.sourceCoverUrl,
     this.isLive = false,
     required this.addedAt,
     required this.updatedAt,
@@ -60,6 +62,7 @@ class Song {
       bitRate: json['bit_rate'] as int? ?? 0,
       sampleRate: json['sample_rate'] as int? ?? 0,
       sourceUrl: json['source_url'] as String?,
+      sourceCoverUrl: json['source_cover_url'] as String?,
       isLive: json['is_live'] as bool? ?? false,
       addedAt:
           json['added_at'] != null
@@ -90,6 +93,7 @@ class Song {
       'bit_rate': bitRate,
       'sample_rate': sampleRate,
       'source_url': sourceUrl,
+      'source_cover_url': sourceCoverUrl,
       'is_live': isLive,
       'added_at': addedAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -113,6 +117,7 @@ class Song {
     int? bitRate,
     int? sampleRate,
     String? sourceUrl,
+    String? sourceCoverUrl,
     bool? isLive,
     DateTime? addedAt,
     DateTime? updatedAt,
@@ -134,6 +139,7 @@ class Song {
       bitRate: bitRate ?? this.bitRate,
       sampleRate: sampleRate ?? this.sampleRate,
       sourceUrl: sourceUrl ?? this.sourceUrl,
+      sourceCoverUrl: sourceCoverUrl ?? this.sourceCoverUrl,
       isLive: isLive ?? this.isLive,
       addedAt: addedAt ?? this.addedAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/constants.dart';
@@ -42,7 +43,7 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
       text: widget.song?.sourceUrl ?? widget.song?.url ?? '',
     );
     _coverUrlController = TextEditingController(
-      text: widget.song?.coverUrl ?? '',
+      text: widget.song?.sourceCoverUrl ?? '',
     );
     _durationController = TextEditingController(
       text: widget.song?.duration.toStringAsFixed(0) ?? '',
@@ -94,6 +95,33 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // 短域 URL 只读信息区（仅编辑模式）
+              if (isEditMode) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '服务端端点（只读）',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildReadOnlyUrlRow('播放', widget.song!.url),
+                        if (widget.song!.coverUrl != null &&
+                            widget.song!.coverUrl!.isNotEmpty)
+                          _buildReadOnlyUrlRow('封面', widget.song!.coverUrl!),
+                        if (widget.song!.lyricUrl != null &&
+                            widget.song!.lyricUrl!.isNotEmpty)
+                          _buildReadOnlyUrlRow('歌词', widget.song!.lyricUrl!),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // 标题
               TextFormField(
                 controller: _titleController,
@@ -141,10 +169,10 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
               // URL
               TextFormField(
                 controller: _urlController,
-                decoration: const InputDecoration(
-                  labelText: 'URL *',
+                decoration: InputDecoration(
+                  labelText: isEditMode ? '源音频 URL *' : 'URL *',
                   hintText: '请输入音频链接',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -164,10 +192,10 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
               // 封面 URL
               TextFormField(
                 controller: _coverUrlController,
-                decoration: const InputDecoration(
-                  labelText: '封面 URL',
+                decoration: InputDecoration(
+                  labelText: isEditMode ? '源封面 URL' : '封面 URL',
                   hintText: '请输入封面图片链接',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.next,
@@ -193,10 +221,10 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
               if (!isRadio) ...[
                 TextFormField(
                   controller: _lyricUrlController,
-                  decoration: const InputDecoration(
-                    labelText: '歌词 URL',
+                  decoration: InputDecoration(
+                    labelText: isEditMode ? '歌词远程 URL' : '歌词 URL',
                     hintText: '请输入歌词接口链接',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.url,
                   textInputAction: TextInputAction.done,
@@ -205,31 +233,83 @@ class _SongEditPageState extends ConsumerState<SongEditPage> {
               ],
 
               // 封面预览
-              if (_coverUrlController.text.isNotEmpty) ...[
-                const Text('封面预览：'),
-                const SizedBox(height: 8),
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      UrlHelper.buildCoverUrl(_coverUrlController.text),
-                      width: 150,
-                      height: 150,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (_, _, _) => Container(
+              Builder(
+                builder: (context) {
+                  final previewUrl = isEditMode
+                      ? (widget.song?.coverUrl ?? '')
+                      : _coverUrlController.text;
+                  if (previewUrl.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    children: [
+                      const Text('封面预览：'),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            UrlHelper.buildCoverUrl(previewUrl),
                             width: 150,
                             height: 150,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.broken_image, size: 48),
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, _, _) => Container(
+                                  width: 150,
+                                  height: 150,
+                                  color: Colors.grey[300],
+                                  child: const Icon(
+                                    Icons.broken_image,
+                                    size: 48,
+                                  ),
+                                ),
                           ),
-                    ),
-                  ),
-                ),
-              ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyUrlRow(String label, String? url) {
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 40,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              url,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy, size: 18),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url));
+              ResponsiveSnackBar.show(context, message: '已复制');
+            },
+            tooltip: '复制',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
       ),
     );
   }
