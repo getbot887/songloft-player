@@ -33,16 +33,34 @@ Future<void> clearBrowserCache() async {
     // Service Worker API 可能不可用（如 HTTP 环境）
   }
 
-  // 用 fetch cache:'reload' 强制从服务器重新拉取并更新 HTTP 缓存条目，
-  // 这样后续 location.reload() 时浏览器使用的就是最新内容。
-  if (cachedUrls.isNotEmpty) {
-    final init = web.RequestInit(cache: 'reload');
-    for (final url in cachedUrls) {
-      try {
-        await web.window.fetch(url.toJS, init).toDart;
-      } catch (_) {}
-    }
+  // index.html 和 Flutter 引导文件可能只在 HTTP 缓存中而不在 Cache Storage，
+  // 必须一并 force-refresh，否则 reload 仍会加载旧版本。
+  final base = web.window.location.origin;
+  final basePath = _getBasePath();
+  for (final path in [
+    basePath,
+    '${basePath}index.html',
+    '${basePath}flutter_bootstrap.js',
+    '${basePath}flutter_service_worker.js',
+    '${basePath}main.dart.js',
+  ]) {
+    cachedUrls.add('$base$path');
   }
+
+  final init = web.RequestInit(cache: 'reload');
+  for (final url in cachedUrls) {
+    try {
+      await web.window.fetch(url.toJS, init).toDart;
+    } catch (_) {}
+  }
+}
+
+String _getBasePath() {
+  final path = web.window.location.pathname;
+  // 对于子路径部署（如 /songloft/），保留完整前缀；根路径返回 '/'
+  if (path.endsWith('/')) return path;
+  final lastSlash = path.lastIndexOf('/');
+  return lastSlash >= 0 ? path.substring(0, lastSlash + 1) : '/';
 }
 
 void reloadPage() {

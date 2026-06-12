@@ -19,14 +19,19 @@ import '../../../shared/utils/responsive_snackbar.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../playlist/presentation/providers/playlist_provider.dart';
 import 'widgets/cache_manager.dart';
+import '../../../features/jsplugin/data/jsplugin_api.dart';
+import '../../../features/jsplugin/presentation/providers/jsplugin_provider.dart';
 import '../../../features/jsplugin/presentation/widgets/jsplugin_manager.dart';
+import '../../../features/jsplugin/presentation/widgets/plugin_icon.dart';
+import '../data/settings_api.dart';
 import 'widgets/scan_manager.dart';
+import 'widgets/section_card.dart';
+import 'widgets/settings_master_detail.dart';
 import 'widgets/theme_selector.dart';
 import 'widgets/frontend_upgrade_dialog.dart';
 import 'widgets/upgrade_dialog.dart';
 import 'providers/settings_provider.dart';
 
-/// 设置页面
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
@@ -35,191 +40,396 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
+  int _selectedCategory = 0;
+
+  static const _categories = [
+    SettingsCategory(
+      icon: Icons.palette_outlined,
+      title: '外观设置',
+      subtitle: '主题、菜单和显示',
+    ),
+    SettingsCategory(
+      icon: Icons.library_music_outlined,
+      title: '音乐库管理',
+      subtitle: '扫描、导入和转换',
+    ),
+    SettingsCategory(
+      icon: Icons.extension_outlined,
+      title: '扩展',
+      subtitle: '插件管理',
+    ),
+    SettingsCategory(
+      icon: Icons.storage_outlined,
+      title: '缓存管理',
+      subtitle: '服务端和本地缓存',
+    ),
+    SettingsCategory(
+      icon: Icons.language_outlined,
+      title: '网络设置',
+      subtitle: '代理配置',
+    ),
+    SettingsCategory(
+      icon: Icons.backup_outlined,
+      title: '数据管理',
+      subtitle: '歌单导出与导入',
+    ),
+    SettingsCategory(
+      icon: Icons.system_update_outlined,
+      title: '关于与更新',
+      subtitle: '版本和日志',
+    ),
+    SettingsCategory(
+      icon: Icons.account_circle_outlined,
+      title: '账户',
+      subtitle: '服务器和登录',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          // 分组1: 外观设置
-          _buildSectionCard(
-            title: '外观设置',
-            icon: Icons.palette_outlined,
-            children: [
-              const ListTile(
-                leading: Icon(Icons.brightness_6),
-                title: Text('主题模式'),
-                subtitle: Text('选择应用的主题外观'),
-              ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  0,
-                  AppSpacing.md,
-                  AppSpacing.md,
-                ),
-                child: ThemeSelector(),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.tab_outlined),
-                title: const Text('菜单设置'),
-                subtitle: const Text('自定义底部导航栏显示的标签'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(AppRoutes.tabConfig),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // 分组2: 音乐库管理
-          _buildSectionCard(
-            title: '音乐库管理',
-            icon: Icons.library_music_outlined,
-            children: [
-              const Padding(padding: EdgeInsets.all(16), child: ScanManager()),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.fingerprint),
-                title: const Text('重复歌曲检测'),
-                subtitle: const Text('通过音频指纹识别内容相同的重复文件'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(AppRoutes.duplicateCheck),
-              ),
-              const Divider(height: 1),
-              _buildAutoConvertTile(),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // 分组4: 扩展
-          _buildSectionCard(
-            title: '扩展',
-            icon: Icons.extension_outlined,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.store_outlined),
-                title: const Text('插件商店'),
-                subtitle: const Text('浏览和安装插件'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(AppRoutes.pluginRegistry),
-              ),
-              const Divider(height: 1),
-              const JSPluginManager(),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // 分组: 缓存管理
-          _buildSectionCard(
-            title: '缓存管理',
-            icon: Icons.storage_outlined,
-            children: [const CacheManager()],
-          ),
-
-          const SizedBox(height: 16),
-
-          // 分组5: 网络设置
-          _buildSectionCard(
-            title: '网络设置',
-            icon: Icons.language_outlined,
-            children: [
-              _buildHttpProxyTile(),
-              const Divider(height: 1),
-              _buildHlsProxyTile(),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // 分组6: 数据管理
-          _buildSectionCard(
-            title: '数据管理',
-            icon: Icons.backup_outlined,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.file_download_outlined),
-                title: const Text('导出歌单'),
-                subtitle: const Text('将所有歌单数据备份为 JSON 文件'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _exportPlaylists,
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.file_upload_outlined),
-                title: const Text('导入歌单'),
-                subtitle: const Text('从 JSON 备份文件还原歌单数据'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _importPlaylists,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // 分组7: 关于与更新
-          _buildSectionCard(
-            title: '关于与更新',
-            icon: Icons.system_update_outlined,
-            children: [
-              _buildServerVersionTile(),
-              if (!AppConfig.isEmbedded) ...[
-                const Divider(height: 1),
-                _buildFrontendUpdateTile(),
-              ],
-              const Divider(height: 1),
-              _buildLogLevelTile(),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.info_outline),
-                title: const Text('关于'),
-                subtitle: const Text('版本信息和许可证'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showAboutDialog,
-              ),
-            ],
-          ),
-
-          // 分组7: 账户
-          _buildSectionCard(
-            title: '账户',
-            icon: Icons.account_circle_outlined,
-            children: [
-              if (!AppConfig.isEmbedded) ...[
-                ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('服务器'),
-                  subtitle: _buildApiUrlSubtitle(),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push(AppRoutes.servers),
-                ),
-                const Divider(height: 1),
-              ],
-              ListTile(
-                leading: Icon(
-                  Icons.logout,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                title: Text(
-                  '退出登录',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showLogoutDialog,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-        ],
+      body: SettingsMasterDetail(
+        categories: _categories,
+        selectedIndex: _selectedCategory,
+        onCategorySelected: (i) => setState(() => _selectedCategory = i),
+        contentBuilder: (_, index) => _buildCategoryContent(index),
       ),
     );
   }
+
+  Widget _buildCategoryContent(int index) {
+    final items = switch (index) {
+      0 => _buildAppearanceItems(),
+      1 => _buildLibraryItems(),
+      2 => _buildExtensionsItems(),
+      3 => _buildCacheItems(),
+      4 => _buildNetworkItems(),
+      5 => _buildDataItems(),
+      6 => _buildAboutItems(),
+      7 => _buildAccountItems(),
+      _ => <Widget>[],
+    };
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: items,
+    );
+  }
+
+  // ── 外观设置 ──
+
+  static const int _maxTabs = 5;
+  static const int _fixedTabs = 2;
+
+  List<Widget> _buildAppearanceItems() {
+    final tabConfigAsync = ref.watch(tabConfigProvider);
+    final pluginsAsync = ref.watch(jsPluginsProvider);
+    final config = tabConfigAsync.value ?? TabConfig.defaultConfig();
+    final plugins = pluginsAsync.value ?? [];
+    final activePlugins = plugins
+        .where((p) => p.isActive && p.entryPath != null && p.entryPath!.isNotEmpty)
+        .toList();
+    final usedCount = _fixedTabs + config.optionalCount;
+    final atLimit = usedCount >= _maxTabs;
+
+    return [
+      const SectionCard(
+        title: '主题',
+        icon: Icons.palette_outlined,
+        children: [
+          ListTile(
+            leading: Icon(Icons.brightness_6),
+            title: Text('主题模式'),
+            subtitle: Text('选择应用的主题外观'),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
+            child: ThemeSelector(),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.md),
+      SectionCard(
+        title: '菜单设置',
+        icon: Icons.tab_outlined,
+        children: [
+          SwitchListTile(
+            secondary: const Icon(Icons.library_music_outlined),
+            title: const Text('歌曲库'),
+            value: config.showLibrary,
+            onChanged: atLimit && !config.showLibrary
+                ? null
+                : (value) => _updateTabConfig(
+                      config.copyWith(showLibrary: value),
+                      atLimit && value,
+                    ),
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            secondary: const Icon(Icons.queue_music_outlined),
+            title: const Text('歌单'),
+            value: config.showPlaylists,
+            onChanged: atLimit && !config.showPlaylists
+                ? null
+                : (value) => _updateTabConfig(
+                      config.copyWith(showPlaylists: value),
+                      atLimit && value,
+                    ),
+          ),
+          if (activePlugins.isNotEmpty) ...[
+            const Divider(height: 1),
+            ..._buildPluginTabTiles(config, activePlugins, atLimit),
+          ],
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Center(
+              child: Text(
+                '已使用 $usedCount/$_maxTabs 个标签位（首页和设置固定显示）',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildPluginTabTiles(
+    TabConfig config,
+    List<JSPlugin> activePlugins,
+    bool atLimit,
+  ) {
+    final widgets = <Widget>[];
+    for (var i = 0; i < activePlugins.length; i++) {
+      final plugin = activePlugins[i];
+      final isEnabled =
+          config.pluginTabs.any((pt) => pt.entryPath == plugin.entryPath);
+
+      if (i > 0) widgets.add(const Divider(height: 1));
+      widgets.add(
+        SwitchListTile(
+          secondary: PluginNavIcon(
+            iconUrl: plugin.iconUrl,
+            size: 24,
+            fallbackIcon: const Icon(Icons.extension_outlined),
+          ),
+          title: Text(plugin.displayName),
+          subtitle: plugin.version != null ? Text('v${plugin.version}') : null,
+          value: isEnabled,
+          onChanged: atLimit && !isEnabled
+              ? null
+              : (value) {
+                  final newPluginTabs =
+                      List<PluginTabEntry>.from(config.pluginTabs);
+                  if (value) {
+                    newPluginTabs.add(PluginTabEntry(
+                      pluginId: plugin.id,
+                      entryPath: plugin.entryPath!,
+                      name: plugin.displayName,
+                    ));
+                  } else {
+                    newPluginTabs.removeWhere(
+                        (pt) => pt.entryPath == plugin.entryPath);
+                  }
+                  _updateTabConfig(
+                    config.copyWith(pluginTabs: newPluginTabs),
+                    atLimit && value,
+                  );
+                },
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  Future<void> _updateTabConfig(TabConfig config, bool wouldExceedLimit) async {
+    if (wouldExceedLimit) {
+      ResponsiveSnackBar.showError(context, message: '最多显示 $_maxTabs 个标签');
+      return;
+    }
+    try {
+      await ref.read(tabConfigProvider.notifier).updateConfig(config);
+    } catch (e) {
+      if (!mounted) return;
+      ResponsiveSnackBar.showError(context, message: '保存失败: $e');
+    }
+  }
+
+  // ── 音乐库管理 ──
+
+  List<Widget> _buildLibraryItems() {
+    return [
+      SectionCard(
+        title: '音乐库管理',
+        icon: Icons.library_music_outlined,
+        children: [
+          const Padding(padding: EdgeInsets.all(16), child: ScanManager()),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.fingerprint),
+            title: const Text('重复歌曲检测'),
+            subtitle: const Text('通过音频指纹识别内容相同的重复文件'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.duplicateCheck),
+          ),
+          const Divider(height: 1),
+          _buildAutoConvertTile(),
+        ],
+      ),
+    ];
+  }
+
+  // ── 扩展 ──
+
+  List<Widget> _buildExtensionsItems() {
+    return [
+      SectionCard(
+        title: '扩展',
+        icon: Icons.extension_outlined,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.store_outlined),
+            title: const Text('插件商店'),
+            subtitle: const Text('浏览和安装插件'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.pluginRegistry),
+          ),
+          const Divider(height: 1),
+          const JSPluginManager(),
+        ],
+      ),
+    ];
+  }
+
+  // ── 缓存管理 ──
+
+  List<Widget> _buildCacheItems() {
+    return [
+      const SectionCard(
+        title: '缓存管理',
+        icon: Icons.storage_outlined,
+        children: [CacheManager()],
+      ),
+    ];
+  }
+
+  // ── 网络设置 ──
+
+  List<Widget> _buildNetworkItems() {
+    return [
+      SectionCard(
+        title: '网络设置',
+        icon: Icons.language_outlined,
+        children: [
+          _buildHttpProxyTile(),
+          const Divider(height: 1),
+          _buildHlsProxyTile(),
+        ],
+      ),
+    ];
+  }
+
+  // ── 数据管理 ──
+
+  List<Widget> _buildDataItems() {
+    return [
+      SectionCard(
+        title: '数据管理',
+        icon: Icons.backup_outlined,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.file_download_outlined),
+            title: const Text('导出歌单'),
+            subtitle: const Text('将所有歌单数据备份为 JSON 文件'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _exportPlaylists,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.file_upload_outlined),
+            title: const Text('导入歌单'),
+            subtitle: const Text('从 JSON 备份文件还原歌单数据'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _importPlaylists,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  // ── 关于与更新 ──
+
+  List<Widget> _buildAboutItems() {
+    return [
+      SectionCard(
+        title: '关于与更新',
+        icon: Icons.system_update_outlined,
+        children: [
+          _buildServerVersionTile(),
+          if (!AppConfig.isEmbedded) ...[
+            const Divider(height: 1),
+            _buildFrontendUpdateTile(),
+          ],
+          const Divider(height: 1),
+          _buildLogLevelTile(),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('关于'),
+            subtitle: const Text('版本信息和许可证'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showAboutDialog,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  // ── 账户 ──
+
+  List<Widget> _buildAccountItems() {
+    return [
+      SectionCard(
+        title: '账户',
+        icon: Icons.account_circle_outlined,
+        children: [
+          if (!AppConfig.isEmbedded) ...[
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('服务器'),
+              subtitle: _buildApiUrlSubtitle(),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.servers),
+            ),
+            const Divider(height: 1),
+          ],
+          ListTile(
+            leading: Icon(
+              Icons.logout,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            title: Text(
+              '退出登录',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showLogoutDialog,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  // ── 业务逻辑方法（保持不变） ──
 
   Future<void> _exportPlaylists() async {
     final token = SecureStorageService.cachedAccessToken;
@@ -334,7 +544,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  /// 构建服务端版本号 + 自动检查更新入口
   Widget _buildServerVersionTile() {
     final upgradeCheck = ref.watch(upgradeCheckProvider);
 
@@ -390,7 +599,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  /// 构建前端（客户端）更新检测入口
   Widget _buildFrontendUpdateTile() {
     final frontendCheck = ref.watch(frontendVersionCheckProvider);
     final versionDisplay = AppConfig.frontendVersionDisplay;
@@ -456,7 +664,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  /// HLS 电台后端代理开关
   Widget _buildHlsProxyTile() {
     final enabledAsync = ref.watch(hlsProxyEnabledProvider);
     final enabled = enabledAsync.value ?? false;
@@ -489,7 +696,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  /// 网络歌曲自动转本地开关
   Widget _buildAutoConvertTile() {
     final enabledAsync = ref.watch(autoConvertEnabledProvider);
     final enabled = enabledAsync.value ?? false;
@@ -522,7 +728,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  /// HTTP 代理设置
   Widget _buildHttpProxyTile() {
     final proxyAsync = ref.watch(httpProxyProvider);
     final proxy = proxyAsync.value ?? '';
@@ -592,7 +797,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  /// 日志等级选择（运行时动态切换 slog 全局等级）
   Widget _buildLogLevelTile() {
     final levelAsync = ref.watch(logLevelProvider);
     final level = levelAsync.value ?? 'info';
@@ -648,49 +852,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildSectionCard({
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 标题栏
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          // 内容
-          ...children,
-        ],
-      ),
-    );
-  }
-
   Widget _buildApiUrlSubtitle() {
     final serversAsync = ref.watch(serversProvider);
     final currentUrl = ref.watch(baseUrlProvider);
@@ -734,9 +895,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (commit != null && commit != 'unknown' && commit.isNotEmpty) {
         gitCommit = commit;
       }
-    } catch (_) {
-      // 忽略错误，使用默认版本号
-    }
+    } catch (_) {}
 
     if (!mounted) return;
 

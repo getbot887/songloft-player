@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_dimensions.dart';
 import '../../../shared/utils/responsive_snackbar.dart';
+import 'widgets/section_card.dart';
 import '../../jsplugin/data/jsplugin_api.dart';
 import '../../jsplugin/presentation/providers/jsplugin_provider.dart';
 import '../../jsplugin/presentation/widgets/plugin_icon.dart';
@@ -36,8 +37,7 @@ class TabConfigPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          _buildSectionCard(
-            context,
+          SectionCard(
             title: '内置页面',
             icon: Icons.dashboard_outlined,
             children: [
@@ -71,8 +71,7 @@ class TabConfigPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _buildSectionCard(
-            context,
+          SectionCard(
             title: '插件入口',
             icon: Icons.extension_outlined,
             children: activePlugins.isEmpty
@@ -170,45 +169,4 @@ class TabConfigPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildSectionCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          ...children,
-        ],
-      ),
-    );
-  }
 }

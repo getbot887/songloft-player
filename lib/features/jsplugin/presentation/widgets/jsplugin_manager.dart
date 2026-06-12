@@ -51,6 +51,7 @@ class _JSPluginManagerState extends ConsumerState<JSPluginManager> {
       leading: const Icon(Icons.javascript),
       title: const Text('JS 插件管理'),
       subtitle: const Text('管理已安装的 JS 插件'),
+      initiallyExpanded: true,
       onExpansionChanged: (expanded) {
         if (expanded) ref.invalidate(jsPluginsProvider);
       },

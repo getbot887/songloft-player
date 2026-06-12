@@ -111,11 +111,6 @@ class _ScanManagerState extends ConsumerState<ScanManager> {
           const SizedBox(height: 12),
         ],
 
-        // 「扫描后自动创建歌单」总开关
-        _buildAutoCreatePlaylistsTile(),
-        const SizedBox(height: AppSpacing.md),
-
-        // 「扫描后自动创建歌单」总开关
         _buildAutoCreatePlaylistsTile(),
         const SizedBox(height: AppSpacing.md),
 
