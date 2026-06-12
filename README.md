@@ -94,7 +94,7 @@ flutter build windows                                                          #
 ./scripts/build-frontend.sh all           # 构建所有平台
 ```
 
-详细构建说明参见 [BUILD_FRONTEND_GUIDE.md](BUILD_FRONTEND_GUIDE.md)。
+详细构建说明参见 [构建指南](docs/build_guide.md)。
 
 ## CI/CD
 
@@ -134,6 +134,16 @@ scripts/
 ├── release-frontend.sh       # 版本发布脚本（语义化版本控制）
 └── docker-build-frontend.sh  # Docker 构建便捷脚本
 ```
+
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [docs/build_guide.md](docs/build_guide.md) | 多平台构建指南 |
+| [docs/development.md](docs/development.md) | 开发指南 |
+| [docs/architecture.md](docs/architecture.md) | 架构补充说明 |
+| [docs/platform-notes.md](docs/platform-notes.md) | 平台特定注意事项 |
+| [scripts/README.md](scripts/README.md) | 版本发布脚本指南 |
 
 ## 技术栈
 
