@@ -12,6 +12,9 @@ class WindowTrayManager with WindowListener, TrayListener {
 
   WindowTrayManager._internal();
 
+  /// 退出前的清理回调（如释放音频资源），由 main.dart 注入
+  Future<void> Function()? onBeforeExit;
+
   static Future<void> setup() async {
     if (kIsWeb) return;
     // 目前根据 MVP 计划，仅在 Windows 下开启隐藏到托盘功能
@@ -84,15 +87,18 @@ class WindowTrayManager with WindowListener, TrayListener {
   }
 
   @override
-  void onTrayMenuItemClick(MenuItem menuItem) {
+  void onTrayMenuItemClick(MenuItem menuItem) async {
     if (menuItem.key == 'show_window') {
       windowManager.show();
       windowManager.focus();
     } else if (menuItem.key == 'exit_app') {
-      // 解除拦截并走系统标准的关闭流程，避免 exit(0) 导致底层 C++ 音频线程强制中断产生的假死阻塞
-      windowManager.setPreventClose(false).then((_) {
-        windowManager.close();
-      });
+      try {
+        await onBeforeExit?.call();
+      } catch (e) {
+        debugPrint('[WindowTrayManager] onBeforeExit error: $e');
+      }
+      await windowManager.setPreventClose(false);
+      await windowManager.close();
     }
   }
 }

@@ -213,6 +213,14 @@ void main(List<String> args) async {
     }
   }
 
+  // 注入退出前清理回调：先释放音频资源，避免窗口销毁时 libmpv C++ 线程仍在运行导致 Fail Fast Exception
+  if (!kIsWeb && Platform.isWindows) {
+    WindowTrayManager().onBeforeExit = () async {
+      await audioHandler.stop();
+      await audioHandler.dispose();
+    };
+  }
+
   runApp(
     ProviderScope(
       overrides: [
