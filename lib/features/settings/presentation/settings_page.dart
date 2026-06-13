@@ -15,6 +15,7 @@ import '../../../core/network/servers_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/app_dimensions.dart';
+import '../../../core/theme/responsive.dart';
 import '../../../shared/utils/responsive_snackbar.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../playlist/presentation/providers/playlist_provider.dart';
@@ -41,6 +42,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   int _selectedCategory = 0;
+  int? _mobileDetailIndex;
 
   static const _categories = [
     SettingsCategory(
@@ -87,12 +89,42 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = !context.isWideScreen || context.isTv;
+
+    if (isMobile && _mobileDetailIndex != null) {
+      final category = _categories[_mobileDetailIndex!];
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            setState(() => _mobileDetailIndex = null);
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: BackButton(
+              onPressed: () => setState(() => _mobileDetailIndex = null),
+            ),
+            title: Text(category.title),
+          ),
+          body: _buildCategoryContent(_mobileDetailIndex!),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: SettingsMasterDetail(
         categories: _categories,
         selectedIndex: _selectedCategory,
-        onCategorySelected: (i) => setState(() => _selectedCategory = i),
+        onCategorySelected: (i) {
+          setState(() {
+            _selectedCategory = i;
+            if (isMobile) {
+              _mobileDetailIndex = i;
+            }
+          });
+        },
         contentBuilder: (_, index) => _buildCategoryContent(index),
       ),
     );

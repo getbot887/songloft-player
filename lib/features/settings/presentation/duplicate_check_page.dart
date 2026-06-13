@@ -52,6 +52,22 @@ class _DuplicateCheckPageState extends ConsumerState<DuplicateCheckPage> {
       final api = ref.read(scanApiProvider);
       final status = await api.getFingerprintStatus();
       if (!mounted) return;
+
+      try {
+        final progress = await api.getFingerprintProgress();
+        if (!mounted) return;
+        if (progress.isRunning) {
+          setState(() {
+            _status = status;
+            _progress = progress;
+            _phase = _PagePhase.computing;
+            _loading = false;
+          });
+          _startPolling();
+          return;
+        }
+      } catch (_) {}
+
       setState(() {
         _status = status;
         _loading = false;

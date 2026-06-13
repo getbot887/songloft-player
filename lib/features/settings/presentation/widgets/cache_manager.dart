@@ -30,7 +30,6 @@ const _cacheSizeOptions = [
   (value: 2 * 1024 * 1024 * 1024, label: '2 GB'),
   (value: 5 * 1024 * 1024 * 1024, label: '5 GB'),
   (value: 10 * 1024 * 1024 * 1024, label: '10 GB'),
-  (value: 0, label: '不限制'),
 ];
 
 /// 缓存管理 Widget

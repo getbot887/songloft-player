@@ -48,17 +48,7 @@ class SettingsMasterDetail extends StatelessWidget {
           title: Text(category.title),
           subtitle: Text(category.subtitle),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            onCategorySelected(index);
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => _CategoryDetailPage(
-                  title: category.title,
-                  child: contentBuilder(context, index),
-                ),
-              ),
-            );
-          },
+          onTap: () => onCategorySelected(index),
         );
       },
     );
@@ -133,20 +123,3 @@ class SettingsMasterDetail extends StatelessWidget {
   }
 }
 
-class _CategoryDetailPage extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _CategoryDetailPage({
-    required this.title,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: child,
-    );
-  }
-}
