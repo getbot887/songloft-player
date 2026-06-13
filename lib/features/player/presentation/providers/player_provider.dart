@@ -300,6 +300,14 @@ class PlayerNotifier extends Notifier<PlayerState> {
     _consecutiveFailures = 0;
     debugPrint('[Player] Song completed, playMode: ${state.playMode}');
 
+    // 通知后端播放完成（触发 JS 插件事件广播），fire-and-forget
+    final completedSong = state.currentSong;
+    if (completedSong != null) {
+      ref.read(songsApiProvider).songPlayed(completedSong.id).catchError((e) {
+        debugPrint('[Player] songPlayed notify failed: $e');
+      });
+    }
+
     // 睡眠定时器钩子：优先于播放模式分支，覆盖所有 playMode
     final timer = state.sleepTimer;
     if (timer != null && timer.mode == SleepTimerMode.afterSongs) {

@@ -219,6 +219,14 @@ class SongsApi {
     return response.data?['deleted'] as int? ?? 0;
   }
 
+  /// 通知后端歌曲播放完成（触发 JS 插件播放事件广播）
+  Future<void> songPlayed(int id) async {
+    await dio.post(
+      '${AppConfig.apiPrefix}/songs/$id/played',
+      queryParameters: {'source': 'songloft-player'},
+    );
+  }
+
   /// 清理无效歌曲
   Future<int> cleanSongs() async {
     final response = await dio.post<Map<String, dynamic>>(
