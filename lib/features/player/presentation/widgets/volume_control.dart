@@ -219,6 +219,14 @@ class _PopupVolumeControlState extends State<PopupVolumeControl> {
   }
 
   @override
+  void didUpdateWidget(PopupVolumeControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.volume != widget.volume) {
+      _overlayEntry?.markNeedsBuild();
+    }
+  }
+
+  @override
   void dispose() {
     _removeOverlay();
     super.dispose();
