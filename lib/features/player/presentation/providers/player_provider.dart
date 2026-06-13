@@ -507,10 +507,17 @@ class PlayerNotifier extends Notifier<PlayerState> {
         await _audioHandler.pause();
       }
     } else {
-      // 如果播放器处于 idle 状态（无音频源，如后台播放失败后），
-      // 需要重新加载当前歌曲而不是简单调用 play()
-      if (_audioHandler.processingState == ja.ProcessingState.idle) {
-        debugPrint('[Player] togglePlay: player idle, re-loading current song');
+      // idle / completed 状态下需要重新加载当前歌曲：
+      // - idle：无音频源（如后台播放失败后）
+      // - completed：歌曲已播完，简单调用 play() 在部分平台上不会自动 seek 到
+      //   开头重播（ExoPlayer STATE_ENDED 下 setPlayWhenReady 不会重启），
+      //   且切换过音质后需要用新 URL 重新加载
+      final ps = _audioHandler.processingState;
+      if (ps == ja.ProcessingState.idle ||
+          ps == ja.ProcessingState.completed) {
+        debugPrint(
+          '[Player] togglePlay: player $ps, re-loading current song',
+        );
         _consecutiveFailures = 0;
         final gen = ++_playGeneration;
         await _playCurrent(gen);

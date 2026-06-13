@@ -407,7 +407,9 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
       debugPrint('[Player] SongloftAudioHandler: starting playback');
       // 注意：just_audio 的 play() Future 在播放停止时才完成，不能 await，否则会阻塞调用链
       // 使用 fire-and-forget 模式，播放状态通过 playbackEventStream.pipe() 自动同步
-      unawaited(_player.play());
+      unawaited(_player.play().catchError((e) {
+        debugPrint('[Player] SongloftAudioHandler: play() failed: $e');
+      }));
       debugPrint(
         '[Player] SongloftAudioHandler: playback triggered (non-blocking)',
       );
