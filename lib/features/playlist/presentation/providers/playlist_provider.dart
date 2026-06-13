@@ -74,6 +74,9 @@ class PaginatedSongsState {
   final bool hasMore;
   final bool isLoadingMore;
   final Object? loadMoreError;
+  final String sort;
+  final String order;
+  final String keyword;
 
   const PaginatedSongsState({
     this.items = const [],
@@ -81,6 +84,9 @@ class PaginatedSongsState {
     this.hasMore = false,
     this.isLoadingMore = false,
     this.loadMoreError,
+    this.sort = 'position',
+    this.order = 'asc',
+    this.keyword = '',
   });
 
   PaginatedSongsState copyWith({
@@ -90,6 +96,9 @@ class PaginatedSongsState {
     bool? isLoadingMore,
     Object? loadMoreError,
     bool clearError = false,
+    String? sort,
+    String? order,
+    String? keyword,
   }) {
     return PaginatedSongsState(
       items: items ?? this.items,
@@ -97,6 +106,9 @@ class PaginatedSongsState {
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       loadMoreError: clearError ? null : (loadMoreError ?? this.loadMoreError),
+      sort: sort ?? this.sort,
+      order: order ?? this.order,
+      keyword: keyword ?? this.keyword,
     );
   }
 }
@@ -213,6 +225,7 @@ final playlistDetailProvider = FutureProvider.family<Playlist, int>((
 /// - 列表滚动到底部时 [loadMore] 加载下一页。
 /// - 需要全部歌曲的场景（手动排序、获取已存在歌曲 ID 用于去重等）调用 [loadAll]。
 /// - 后端响应包含 total 字段，因此通过 `items.length < total` 判断是否还有更多。
+/// - [setSort] / [search] 会清空列表并重新加载首页。
 class PaginatedSongsNotifier extends AsyncNotifier<PaginatedSongsState> {
   PaginatedSongsNotifier(this._playlistId);
 
@@ -222,6 +235,11 @@ class PaginatedSongsNotifier extends AsyncNotifier<PaginatedSongsState> {
   /// 每页大小
   static const int pageLimit = 100;
 
+  /// 当前排序和搜索参数（build 时默认值）
+  String _sort = 'position';
+  String _order = 'asc';
+  String _keyword = '';
+
   @override
   Future<PaginatedSongsState> build() async {
     final repository = ref.watch(playlistRepositoryProvider);
@@ -229,12 +247,18 @@ class PaginatedSongsNotifier extends AsyncNotifier<PaginatedSongsState> {
       _playlistId,
       limit: pageLimit,
       offset: 0,
+      sort: _sort,
+      order: _order,
+      keyword: _keyword,
     );
     return PaginatedSongsState(
       items: response.songs,
       total: response.total,
       hasMore: response.songs.length < response.total,
       isLoadingMore: false,
+      sort: _sort,
+      order: _order,
+      keyword: _keyword,
     );
   }
 
@@ -254,6 +278,9 @@ class PaginatedSongsNotifier extends AsyncNotifier<PaginatedSongsState> {
         _playlistId,
         limit: pageLimit,
         offset: current.items.length,
+        sort: current.sort,
+        order: current.order,
+        keyword: current.keyword,
       );
       if (response.songs.isEmpty) {
         state = AsyncValue.data(
@@ -289,6 +316,30 @@ class PaginatedSongsNotifier extends AsyncNotifier<PaginatedSongsState> {
       await loadMore();
       if (state.value?.loadMoreError != null) break;
     }
+  }
+
+  /// 切换排序（视图排序，不改变 position）
+  Future<void> setSort(String sort, String order) async {
+    _sort = sort;
+    _order = order;
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+
+  /// 搜索歌单内歌曲
+  Future<void> search(String keyword) async {
+    _keyword = keyword;
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+
+  /// 重置排序和搜索到默认状态
+  Future<void> resetFilter() async {
+    _sort = 'position';
+    _order = 'asc';
+    _keyword = '';
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
   }
 }
 

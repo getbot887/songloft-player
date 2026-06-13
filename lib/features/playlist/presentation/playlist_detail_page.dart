@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show File;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -52,6 +53,11 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   /// 排序模式下的可排序歌曲列表（本地副本）
   List<Song> _sortableSongs = [];
 
+  /// 搜索状态
+  bool _isSearchMode = false;
+  final _searchController = TextEditingController();
+  Timer? _debounceTimer;
+
   @override
   void initState() {
     super.initState();
@@ -62,7 +68,27 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      ref.read(playlistSongsProvider(_playlistIdInt).notifier).search(value);
+    });
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearchMode = !_isSearchMode;
+      if (!_isSearchMode) {
+        _searchController.clear();
+        _debounceTimer?.cancel();
+        ref.read(playlistSongsProvider(_playlistIdInt).notifier).search('');
+      }
+    });
   }
 
   /// 滚动监听：接近底部时触发分页加载
@@ -102,6 +128,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
     if (mounted) {
       if (success) {
+        ref.read(playlistSongsProvider(_playlistIdInt).notifier).resetFilter();
         ResponsiveSnackBar.showSuccess(context, message: '排序已保存');
       } else {
         ResponsiveSnackBar.showError(context, message: '排序保存失败');
@@ -145,6 +172,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
     if (mounted) {
       if (success) {
+        ref.read(playlistSongsProvider(_playlistIdInt).notifier).resetFilter();
         ResponsiveSnackBar.showSuccess(
           context,
           message: ascending ? '已按名称升序排列' : '已按名称降序排列',
@@ -210,6 +238,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
     if (mounted) {
       if (success) {
+        ref.read(playlistSongsProvider(_playlistIdInt).notifier).resetFilter();
         ResponsiveSnackBar.showSuccess(context, message: '已按数字前缀排序');
       } else {
         ResponsiveSnackBar.showError(context, message: '排序失败');
@@ -399,6 +428,10 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         SliverToBoxAdapter(
           child: _buildActionButtons(context, playlist, songsAsync),
         ),
+
+        // 搜索栏
+        if (_isSearchMode)
+          SliverToBoxAdapter(child: _buildSearchBar(context)),
 
         // 歌曲列表
         songsAsync.when(
@@ -638,6 +671,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       ];
     }
 
+    final currentSort = songsAsync.value?.sort ?? 'position';
+    final hasKeyword = (songsAsync.value?.keyword ?? '').isNotEmpty;
+
     // 正常模式
     return [
       if (totalSongs > 1)
@@ -645,14 +681,33 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           icon: const Icon(Icons.sort),
           tooltip: '排序',
           onSelected: (value) {
+            final notifier =
+                ref.read(playlistSongsProvider(_playlistIdInt).notifier);
             switch (value) {
-              case 'name_asc':
+              // 视图排序（非破坏性）
+              case 'view_position':
+                notifier.setSort('position', 'asc');
+                break;
+              case 'view_added_at':
+                notifier.setSort('added_at', 'desc');
+                break;
+              case 'view_title':
+                notifier.setSort('title', 'asc');
+                break;
+              case 'view_artist':
+                notifier.setSort('artist', 'asc');
+                break;
+              case 'view_duration':
+                notifier.setSort('duration', 'asc');
+                break;
+              // 永久排序
+              case 'perm_name_asc':
                 _autoSortByName(songs, ascending: true);
                 break;
-              case 'name_desc':
+              case 'perm_name_desc':
                 _autoSortByName(songs, ascending: false);
                 break;
-              case 'number_asc':
+              case 'perm_number':
                 _autoSortByNumberPrefix(songs);
                 break;
               case 'manual':
@@ -662,44 +717,83 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           },
           itemBuilder:
               (context) => [
-                const PopupMenuItem(
-                  value: 'name_asc',
-                  child: ListTile(
-                    leading: Icon(Icons.sort_by_alpha),
-                    title: Text('按名称排序 A→Z'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                _buildSortMenuItem(
+                  value: 'view_position',
+                  icon: Icons.reorder,
+                  title: '自定义顺序',
+                  isSelected: currentSort == 'position',
                 ),
-                const PopupMenuItem(
-                  value: 'name_desc',
-                  child: ListTile(
-                    leading: Icon(Icons.sort_by_alpha),
-                    title: Text('按名称排序 Z→A'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                _buildSortMenuItem(
+                  value: 'view_added_at',
+                  icon: Icons.schedule,
+                  title: '最近加入',
+                  isSelected: currentSort == 'added_at',
                 ),
-                const PopupMenuItem(
-                  value: 'number_asc',
-                  child: ListTile(
-                    leading: Icon(Icons.format_list_numbered),
-                    title: Text('按数字前缀排序'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                _buildSortMenuItem(
+                  value: 'view_title',
+                  icon: Icons.sort_by_alpha,
+                  title: '标题',
+                  isSelected: currentSort == 'title',
                 ),
-                const PopupMenuItem(
-                  value: 'manual',
-                  child: ListTile(
-                    leading: Icon(Icons.drag_handle),
-                    title: Text('手动排序'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                _buildSortMenuItem(
+                  value: 'view_artist',
+                  icon: Icons.person,
+                  title: '艺术家',
+                  isSelected: currentSort == 'artist',
                 ),
+                _buildSortMenuItem(
+                  value: 'view_duration',
+                  icon: Icons.timer,
+                  title: '时长',
+                  isSelected: currentSort == 'duration',
+                ),
+                const PopupMenuDivider(),
+                if (!hasKeyword) ...[
+                  const PopupMenuItem(
+                    value: 'perm_name_asc',
+                    child: ListTile(
+                      leading: Icon(Icons.sort_by_alpha),
+                      title: Text('按名称排序 A→Z'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'perm_name_desc',
+                    child: ListTile(
+                      leading: Icon(Icons.sort_by_alpha),
+                      title: Text('按名称排序 Z→A'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'perm_number',
+                    child: ListTile(
+                      leading: Icon(Icons.format_list_numbered),
+                      title: Text('按数字前缀排序'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  if (currentSort == 'position')
+                    const PopupMenuItem(
+                      value: 'manual',
+                      child: ListTile(
+                        leading: Icon(Icons.drag_handle),
+                        title: Text('手动排序'),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                ],
               ],
         ),
+      IconButton(
+        icon: Icon(_isSearchMode ? Icons.search_off : Icons.search),
+        tooltip: '搜索',
+        onPressed: _toggleSearch,
+      ),
       if (songs.isNotEmpty)
         IconButton(
           icon: const Icon(Icons.checklist),
@@ -750,6 +844,63 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             ],
       ),
     ];
+  }
+
+  Widget _buildSearchBar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    ref
+                        .read(
+                          playlistSongsProvider(_playlistIdInt).notifier,
+                        )
+                        .search('');
+                  },
+                )
+              : null,
+          hintText: '搜索歌曲...',
+          filled: true,
+          fillColor: colorScheme.surfaceContainerHighest,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        ),
+        onChanged: _onSearchChanged,
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildSortMenuItem({
+    required String value,
+    required IconData icon,
+    required String title,
+    required bool isSelected,
+  }) {
+    return PopupMenuItem(
+      value: value,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        trailing: isSelected ? const Icon(Icons.check, size: 18) : null,
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+      ),
+    );
   }
 
   Widget _buildActionButtons(

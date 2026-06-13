@@ -128,15 +128,22 @@ class PlaylistApi {
   }
 
   /// 获取歌单内歌曲
-  /// GET /api/v1/playlists/{id}/songs?limit=20&offset=0
+  /// GET /api/v1/playlists/{id}/songs?limit=20&offset=0&sort=position&order=asc&keyword=
   Future<SongListResponse> getPlaylistSongs(
     int id, {
     int limit = 20,
     int offset = 0,
+    String? sort,
+    String? order,
+    String? keyword,
   }) async {
+    final params = <String, dynamic>{'limit': limit, 'offset': offset};
+    if (sort != null && sort.isNotEmpty) params['sort'] = sort;
+    if (order != null && order.isNotEmpty) params['order'] = order;
+    if (keyword != null && keyword.isNotEmpty) params['keyword'] = keyword;
     final response = await dio.get(
       '${AppConfig.apiPrefix}/playlists/$id/songs',
-      queryParameters: {'limit': limit, 'offset': offset},
+      queryParameters: params,
     );
     return SongListResponse.fromJson(response.data as Map<String, dynamic>);
   }

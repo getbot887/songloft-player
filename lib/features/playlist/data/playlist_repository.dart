@@ -112,12 +112,18 @@ class PlaylistRepository {
     int id, {
     int limit = 20,
     int offset = 0,
+    String? sort,
+    String? order,
+    String? keyword,
   }) async {
     try {
       return await playlistApi.getPlaylistSongs(
         id,
         limit: limit,
         offset: offset,
+        sort: sort,
+        order: order,
+        keyword: keyword,
       );
     } on DioException catch (e) {
       throw _handleError(e);
