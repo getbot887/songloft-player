@@ -59,6 +59,7 @@ class PlayerNotifier extends Notifier<PlayerState> {
   static const int _retryDelayMs = 1000;
 
   int _consecutiveFailures = 0;
+  Song? _lastPlayedSong;
 
   // 播放状态持久化
   Timer? _saveDebounceTimer;
@@ -305,17 +306,23 @@ class PlayerNotifier extends Notifier<PlayerState> {
     });
   }
 
+  void _notifyPlayEvent(int songId, String type) {
+    ref
+        .read(songsApiProvider)
+        .songPlayed(songId, type: type)
+        .catchError((e) {
+      debugPrint('[Player] playEvent($type) notify failed: $e');
+    });
+  }
+
   /// 歌曲播放完成处理
   void _onSongCompleted() {
     _consecutiveFailures = 0;
     debugPrint('[Player] Song completed, playMode: ${state.playMode}');
 
-    // 通知后端播放完成（触发 JS 插件事件广播），fire-and-forget
     final completedSong = state.currentSong;
     if (completedSong != null) {
-      ref.read(songsApiProvider).songPlayed(completedSong.id).catchError((e) {
-        debugPrint('[Player] songPlayed notify failed: $e');
-      });
+      _notifyPlayEvent(completedSong.id, 'finish');
     }
 
     // 睡眠定时器钩子：优先于播放模式分支，覆盖所有 playMode
@@ -1348,6 +1355,14 @@ class PlayerNotifier extends Notifier<PlayerState> {
       return;
     }
 
+    final previousSong = _lastPlayedSong;
+    _lastPlayedSong = song;
+    if (previousSong != null &&
+        previousSong.id != song.id &&
+        _audioHandler.processingState != ja.ProcessingState.completed) {
+      _notifyPlayEvent(previousSong.id, 'skip');
+    }
+
     debugPrint(
       '[Player] _playCurrent: ${song.title} (id: ${song.id}, type: ${song.type})',
     );
@@ -1391,6 +1406,7 @@ class PlayerNotifier extends Notifier<PlayerState> {
         // 播放成功 - 重置连续失败计数
         _consecutiveFailures = 0;
         state = state.copyWith(isRetrying: false);
+        _notifyPlayEvent(song.id, 'play');
 
         // 恢复上次保存的播放进度
         if (_savedPositionMs > 0) {
