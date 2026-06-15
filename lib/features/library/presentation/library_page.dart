@@ -377,7 +377,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                  const SizedBox(width: 52), // 封面空间
+                  const SizedBox(width: 64), // 封面空间 (12+40+12 匹配数据行)
                   Expanded(
                     flex: 3,
                     child: Text(
@@ -431,7 +431,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const SizedBox(width: 120), // 操作按钮空间
+                  const SizedBox(width: 140), // 操作按钮空间
                 ],
               ),
             ),

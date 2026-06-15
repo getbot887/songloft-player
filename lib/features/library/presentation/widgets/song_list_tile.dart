@@ -148,7 +148,7 @@ class SongListTile extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             // 操作按钮
-            _buildDesktopActions(context),
+            SizedBox(width: 140, child: _buildDesktopActions(context)),
           ],
         ),
       ),
@@ -291,7 +291,9 @@ class SongListTile extends ConsumerWidget {
   }
 
   Widget _buildDesktopActions(BuildContext context) {
-    if (isSelectionMode) return const SizedBox(width: 144);
+    if (isSelectionMode) return const SizedBox(width: 140);
+
+    const constraints = BoxConstraints(minWidth: 28, minHeight: 28);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -301,6 +303,8 @@ class SongListTile extends ConsumerWidget {
           tooltip: '播放',
           onPressed: onTap,
           iconSize: 20,
+          padding: EdgeInsets.zero,
+          constraints: constraints,
         ),
         FavoriteButton(songId: song.id, songType: song.type, size: 20),
         if (song.type != AppConstants.songTypeLocal)
@@ -309,18 +313,24 @@ class SongListTile extends ConsumerWidget {
             tooltip: '编辑',
             onPressed: onEdit,
             iconSize: 20,
+            padding: EdgeInsets.zero,
+            constraints: constraints,
           ),
         IconButton(
           icon: const Icon(Icons.playlist_add),
           tooltip: '添加到歌单',
           onPressed: onAddToPlaylist,
           iconSize: 20,
+          padding: EdgeInsets.zero,
+          constraints: constraints,
         ),
         IconButton(
           icon: const Icon(Icons.delete_outline),
           tooltip: '删除',
           onPressed: onDelete,
           iconSize: 20,
+          padding: EdgeInsets.zero,
+          constraints: constraints,
         ),
       ],
     );
