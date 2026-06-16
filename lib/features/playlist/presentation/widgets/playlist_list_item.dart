@@ -11,6 +11,7 @@ class PlaylistListItem extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onPlayAll;
+  final VoidCallback? onLongPress;
   final bool isSelectionMode;
   final bool isSelected;
   final VoidCallback? onSelect;
@@ -22,6 +23,7 @@ class PlaylistListItem extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.onPlayAll,
+    this.onLongPress,
     this.isSelectionMode = false,
     this.isSelected = false,
     this.onSelect,
@@ -43,7 +45,7 @@ class PlaylistListItem extends StatelessWidget {
               : null,
       child: InkWell(
         onTap: isSelectionMode ? onSelect : onTap,
-        onLongPress: isSelectionMode ? null : _showContextMenu(context),
+        onLongPress: isSelectionMode ? null : onLongPress,
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Row(
@@ -246,30 +248,6 @@ class PlaylistListItem extends StatelessWidget {
         position: RelativeRect.fromLTRB(
           position.dx + size.width - 48,
           position.dy + size.height,
-          position.dx + size.width,
-          position.dy + size.height,
-        ),
-        items: _buildMenuItems(context),
-      );
-    };
-  }
-
-  /// 长按显示上下文菜单
-  VoidCallback? _showContextMenu(BuildContext context) {
-    if (onEdit == null && onDelete == null) return null;
-
-    return () {
-      final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-      if (renderBox == null) return;
-
-      final position = renderBox.localToGlobal(Offset.zero);
-      final size = renderBox.size;
-
-      showMenu(
-        context: context,
-        position: RelativeRect.fromLTRB(
-          position.dx,
-          position.dy + size.height / 2,
           position.dx + size.width,
           position.dy + size.height,
         ),

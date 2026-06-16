@@ -11,6 +11,7 @@ class PlaylistCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onPlayAll;
+  final VoidCallback? onLongPress;
   final bool isSelectionMode;
   final bool isSelected;
   final VoidCallback? onSelect;
@@ -22,6 +23,7 @@ class PlaylistCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.onPlayAll,
+    this.onLongPress,
     this.isSelectionMode = false,
     this.isSelected = false,
     this.onSelect,
@@ -43,7 +45,7 @@ class PlaylistCard extends StatelessWidget {
               : null,
       child: InkWell(
         onTap: isSelectionMode ? onSelect : onTap,
-        onLongPress: isSelectionMode ? null : _showContextMenu(context),
+        onLongPress: isSelectionMode ? null : onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -128,6 +130,19 @@ class PlaylistCard extends StatelessWidget {
                             color: colorScheme.onSecondary,
                           ),
                         ),
+                      ),
+                    ),
+
+                  // 更多按钮（右上角，非多选模式下显示）
+                  if (!isSelectionMode && (onEdit != null || onDelete != null))
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Material(
+                        color: colorScheme.surface.withValues(alpha: 0.7),
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: _buildMoreButton(context),
                       ),
                     ),
                 ],
@@ -258,53 +273,52 @@ class PlaylistCard extends StatelessWidget {
     );
   }
 
-  VoidCallback? _showContextMenu(BuildContext context) {
-    if (onEdit == null && onDelete == null) return null;
-
-    return () {
-      final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-      if (renderBox == null) return;
-
-      final position = renderBox.localToGlobal(Offset.zero);
-      final size = renderBox.size;
-
-      showMenu(
-        context: context,
-        position: RelativeRect.fromLTRB(
-          position.dx,
-          position.dy + size.height / 2,
-          position.dx + size.width,
-          position.dy + size.height,
-        ),
-        items: [
-          if (onEdit != null)
-            PopupMenuItem(
-              onTap: onEdit,
-              child: const ListTile(
-                leading: Icon(Icons.edit),
-                title: Text('编辑'),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
+  Widget _buildMoreButton(BuildContext context) {
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_vert,
+        size: 20,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      tooltip: '更多操作',
+      onSelected: (value) {
+        switch (value) {
+          case 'edit':
+            onEdit?.call();
+          case 'delete':
+            onDelete?.call();
+        }
+      },
+      itemBuilder: (context) => [
+        if (onEdit != null)
+          const PopupMenuItem(
+            value: 'edit',
+            child: ListTile(
+              leading: Icon(Icons.edit),
+              title: Text('编辑'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
             ),
-          if (onDelete != null && !playlist.isBuiltIn)
-            PopupMenuItem(
-              onTap: onDelete,
-              child: ListTile(
-                leading: Icon(
-                  Icons.delete,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                title: Text(
-                  '删除',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
+          ),
+        if (onDelete != null && !playlist.isBuiltIn)
+          PopupMenuItem(
+            value: 'delete',
+            child: ListTile(
+              leading: Icon(
+                Icons.delete,
+                color: Theme.of(context).colorScheme.error,
               ),
+              title: Text(
+                '删除',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
             ),
-        ],
-      );
-    };
+          ),
+      ],
+    );
   }
 }

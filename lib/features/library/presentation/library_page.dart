@@ -330,6 +330,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           isSelected: state.selectedSongIds.contains(song.id),
           isSelectionMode: state.isSelectionMode,
           onTap: () => _onSongTap(song, index),
+          onLongPress: () {
+            ref.read(songsListProvider.notifier).toggleSelectMode();
+            ref.read(songsListProvider.notifier).toggleSongSelection(song.id);
+          },
           onSelect: () {
             ref.read(songsListProvider.notifier).toggleSongSelection(song.id);
           },
@@ -459,6 +463,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     isSelectionMode: state.isSelectionMode,
                     isNarrow: isNarrow,
                     onTap: () => _onSongTap(song, index),
+                    onLongPress: () {
+                      ref
+                          .read(songsListProvider.notifier)
+                          .toggleSelectMode();
+                      ref
+                          .read(songsListProvider.notifier)
+                          .toggleSongSelection(song.id);
+                    },
                     onSelect: () {
                       ref
                           .read(songsListProvider.notifier)

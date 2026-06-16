@@ -676,6 +676,17 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
     // 正常模式
     return [
+      IconButton(
+        icon: Icon(_isSearchMode ? Icons.search_off : Icons.search),
+        tooltip: '搜索',
+        onPressed: _toggleSearch,
+      ),
+      if (songs.isNotEmpty)
+        IconButton(
+          icon: const Icon(Icons.checklist),
+          tooltip: '多选',
+          onPressed: _enterSelectMode,
+        ),
       if (totalSongs > 1)
         PopupMenuButton<String>(
           icon: const Icon(Icons.sort),
@@ -789,28 +800,15 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 ],
               ],
         ),
-      IconButton(
-        icon: Icon(_isSearchMode ? Icons.search_off : Icons.search),
-        tooltip: '搜索',
-        onPressed: _toggleSearch,
-      ),
-      if (songs.isNotEmpty)
-        IconButton(
-          icon: const Icon(Icons.checklist),
-          tooltip: '多选',
-          onPressed: _enterSelectMode,
-        ),
-      IconButton(
-        icon: const Icon(Icons.edit),
-        tooltip: isBuiltIn ? '修改封面' : '编辑歌单',
-        onPressed: () => _showEditDialog(playlist),
-      ),
       PopupMenuButton<String>(
         icon: const Icon(Icons.more_vert),
         onSelected: (value) {
           switch (value) {
             case 'add_songs':
               _addSongs();
+              break;
+            case 'edit':
+              _showEditDialog(playlist);
               break;
             case 'delete':
               _confirmDelete(playlist);
@@ -828,7 +826,17 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              if (!isBuiltIn)
+              PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  leading: const Icon(Icons.edit),
+                  title: Text(isBuiltIn ? '修改封面' : '编辑歌单'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              if (!isBuiltIn) ...[
+                const PopupMenuDivider(),
                 PopupMenuItem(
                   value: 'delete',
                   child: ListTile(
@@ -841,6 +849,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
+              ],
             ],
       ),
     ];
@@ -1022,6 +1031,10 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           index: index + 1,
           onTap: () => _playSong(song, songs, index),
           onRemove: () => _removeSong(playlist.id, song),
+          onLongPress: () {
+            _enterSelectMode();
+            _toggleSongSelection(song.id);
+          },
         );
       }, childCount: songs.length),
     );
@@ -1258,6 +1271,7 @@ class _SongListTile extends StatelessWidget {
   final int index;
   final VoidCallback onTap;
   final VoidCallback onRemove;
+  final VoidCallback? onLongPress;
 
   /// 是否显示拖拽手柄（排序模式）
   final bool showDragHandle;
@@ -1280,6 +1294,7 @@ class _SongListTile extends StatelessWidget {
     required this.index,
     required this.onTap,
     required this.onRemove,
+    this.onLongPress,
     this.showDragHandle = false,
     this.showCheckbox = false,
     this.isChecked = false,
@@ -1296,6 +1311,7 @@ class _SongListTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
+      onLongPress: onLongPress,
       leading: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

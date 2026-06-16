@@ -16,6 +16,7 @@ class SongListTile extends ConsumerWidget {
   final bool isSelectionMode;
   final bool isNarrow; // 窄屏模式（隐藏专辑列）
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final VoidCallback? onSelect;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
@@ -29,6 +30,7 @@ class SongListTile extends ConsumerWidget {
     this.isSelectionMode = false,
     this.isNarrow = false,
     this.onTap,
+    this.onLongPress,
     this.onSelect,
     this.onDelete,
     this.onEdit,
@@ -68,6 +70,7 @@ class SongListTile extends ConsumerWidget {
       ),
       trailing: _buildTrailingActions(context),
       onTap: isSelectionMode ? onSelect : onTap,
+      onLongPress: isSelectionMode ? null : onLongPress,
     );
   }
 
@@ -78,6 +81,7 @@ class SongListTile extends ConsumerWidget {
 
     return InkWell(
       onTap: isSelectionMode ? onSelect : onTap,
+      onLongPress: isSelectionMode ? null : onLongPress,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(

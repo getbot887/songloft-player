@@ -407,6 +407,12 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
             ref.read(playlistViewModeProvider.notifier).toggleViewMode();
           },
         ),
+        // 多选模式按钮
+        IconButton(
+          icon: const Icon(Icons.checklist),
+          tooltip: '多选',
+          onPressed: _toggleSelectMode,
+        ),
         // 排序按钮（含自动排序选项）
         PopupMenuButton<String>(
           icon: const Icon(Icons.sort),
@@ -462,12 +468,6 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
                   ),
                 ),
               ],
-        ),
-        // 多选模式按钮
-        IconButton(
-          icon: const Icon(Icons.checklist),
-          tooltip: '多选',
-          onPressed: _toggleSelectMode,
         ),
         // 更多菜单
         PopupMenuButton<String>(
@@ -738,6 +738,13 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
             onDelete:
                 playlist.isBuiltIn ? null : () => _confirmDelete(playlist),
             onPlayAll: () => _playAll(playlist),
+            onLongPress: () {
+              setState(() {
+                _isSelectionMode = true;
+                _selectedPlaylistIds.clear();
+              });
+              _togglePlaylistSelection(playlist);
+            },
             isSelectionMode: _isSelectionMode,
             isSelected: _selectedPlaylistIds.contains(playlist.id),
             onSelect: () => _togglePlaylistSelection(playlist),
@@ -760,6 +767,13 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
             onDelete:
                 playlist.isBuiltIn ? null : () => _confirmDelete(playlist),
             onPlayAll: () => _playAll(playlist),
+            onLongPress: () {
+              setState(() {
+                _isSelectionMode = true;
+                _selectedPlaylistIds.clear();
+              });
+              _togglePlaylistSelection(playlist);
+            },
             isSelectionMode: _isSelectionMode,
             isSelected: _selectedPlaylistIds.contains(playlist.id),
             onSelect: () => _togglePlaylistSelection(playlist),
