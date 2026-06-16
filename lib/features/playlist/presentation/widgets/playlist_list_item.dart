@@ -15,6 +15,8 @@ class PlaylistListItem extends StatelessWidget {
   final bool isSelectionMode;
   final bool isSelected;
   final VoidCallback? onSelect;
+  final bool isCurrentPlaylist;
+  final bool isPlaying;
 
   const PlaylistListItem({
     super.key,
@@ -27,6 +29,8 @@ class PlaylistListItem extends StatelessWidget {
     this.isSelectionMode = false,
     this.isSelected = false,
     this.onSelect,
+    this.isCurrentPlaylist = false,
+    this.isPlaying = false,
   });
 
   @override
@@ -37,7 +41,7 @@ class PlaylistListItem extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       shape:
-          isSelectionMode && isSelected
+          (isSelectionMode && isSelected) || isCurrentPlaylist
               ? RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(color: colorScheme.primary, width: 2),
@@ -65,7 +69,9 @@ class PlaylistListItem extends StatelessWidget {
                 child: SizedBox(
                   width: 56,
                   height: 56,
-                  child:
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
                       playlist.coverImageUrl != null
                           ? CachedNetworkImage(
                             imageUrl: UrlHelper.buildCoverUrl(
@@ -80,6 +86,19 @@ class PlaylistListItem extends StatelessWidget {
                                     _buildPlaceholder(colorScheme),
                           )
                           : _buildPlaceholder(colorScheme),
+                      if (isCurrentPlaylist && isPlaying)
+                        Container(
+                          color: Colors.black54,
+                          child: Center(
+                            child: Icon(
+                              Icons.equalizer_rounded,
+                              size: 24,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -98,6 +117,9 @@ class PlaylistListItem extends StatelessWidget {
                             playlist.name,
                             style: textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
+                              color: isCurrentPlaylist
+                                  ? colorScheme.primary
+                                  : null,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

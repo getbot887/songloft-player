@@ -713,6 +713,8 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
   }
 
   Widget _buildGridView(BuildContext context, List<Playlist> playlists) {
+    final currentPlaylistId = ref.watch(sourcePlaylistIdProvider);
+    final isPlaying = ref.watch(isPlayingProvider);
     final crossAxisCount = context.responsive<int>(
       mobile: 2,
       tablet: 3,
@@ -748,6 +750,8 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
             isSelectionMode: _isSelectionMode,
             isSelected: _selectedPlaylistIds.contains(playlist.id),
             onSelect: () => _togglePlaylistSelection(playlist),
+            isCurrentPlaylist: playlist.id == currentPlaylistId,
+            isPlaying: isPlaying,
           );
         }, childCount: playlists.length),
       ),
@@ -755,6 +759,8 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
   }
 
   Widget _buildListView(BuildContext context, List<Playlist> playlists) {
+    final currentPlaylistId = ref.watch(sourcePlaylistIdProvider);
+    final isPlaying = ref.watch(isPlayingProvider);
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList(
@@ -777,6 +783,8 @@ class _PlaylistsPageState extends ConsumerState<PlaylistsPage> {
             isSelectionMode: _isSelectionMode,
             isSelected: _selectedPlaylistIds.contains(playlist.id),
             onSelect: () => _togglePlaylistSelection(playlist),
+            isCurrentPlaylist: playlist.id == currentPlaylistId,
+            isPlaying: isPlaying,
           );
         }, childCount: playlists.length),
       ),

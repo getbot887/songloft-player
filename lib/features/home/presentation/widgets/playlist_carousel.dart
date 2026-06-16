@@ -9,11 +9,15 @@ import '../../../playlist/domain/playlist.dart';
 class PlaylistCarousel extends StatelessWidget {
   final List<Playlist> playlists;
   final ValueChanged<Playlist> onPlaylistTap;
+  final int? currentPlaylistId;
+  final bool isPlaying;
 
   const PlaylistCarousel({
     super.key,
     required this.playlists,
     required this.onPlaylistTap,
+    this.currentPlaylistId,
+    this.isPlaying = false,
   });
 
   @override
@@ -45,6 +49,8 @@ class PlaylistCarousel extends StatelessWidget {
               playlist: playlist,
               width: cardWidth,
               onTap: () => onPlaylistTap(playlist),
+              isCurrentPlaylist: playlist.id == currentPlaylistId,
+              isPlaying: isPlaying,
             ),
           );
         },
@@ -57,11 +63,15 @@ class _PlaylistCarouselItem extends StatelessWidget {
   final Playlist playlist;
   final double width;
   final VoidCallback onTap;
+  final bool isCurrentPlaylist;
+  final bool isPlaying;
 
   const _PlaylistCarouselItem({
     required this.playlist,
     required this.width,
     required this.onTap,
+    this.isCurrentPlaylist = false,
+    this.isPlaying = false,
   });
 
   @override
@@ -83,9 +93,14 @@ class _PlaylistCarouselItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: colorScheme.surfaceContainerHighest,
+                  border: isCurrentPlaylist
+                      ? Border.all(color: colorScheme.primary, width: 2)
+                      : null,
                 ),
                 clipBehavior: Clip.antiAlias,
-                child:
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
                     playlist.coverImageUrl != null
                         ? CachedNetworkImage(
                           imageUrl: UrlHelper.buildCoverUrl(
@@ -99,6 +114,19 @@ class _PlaylistCarouselItem extends StatelessWidget {
                                   _buildPlaceholder(colorScheme),
                         )
                         : _buildPlaceholder(colorScheme),
+                    if (isCurrentPlaylist && isPlaying)
+                      Container(
+                        color: Colors.black54,
+                        child: Center(
+                          child: Icon(
+                            Icons.equalizer_rounded,
+                            size: 32,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -108,6 +136,7 @@ class _PlaylistCarouselItem extends StatelessWidget {
                 playlist.name,
                 style: textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
+                  color: isCurrentPlaylist ? colorScheme.primary : null,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

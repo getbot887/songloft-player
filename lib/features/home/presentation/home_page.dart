@@ -7,6 +7,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/responsive.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../playlist/domain/playlist.dart';
+import '../../player/presentation/providers/player_provider.dart';
 import '../../playlist/presentation/providers/playlist_provider.dart';
 import 'widgets/playlist_carousel.dart';
 import '../../../features/jsplugin/presentation/widgets/jsplugin_grid.dart';
@@ -95,6 +96,8 @@ class HomePage extends ConsumerWidget {
   }) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final currentPlaylistId = ref.watch(sourcePlaylistIdProvider);
+    final isPlaying = ref.watch(isPlayingProvider);
 
     // 分离普通歌单和电台歌单
     final normalPlaylists = playlists.where((p) => p.type == 'normal').toList();
@@ -128,6 +131,8 @@ class HomePage extends ConsumerWidget {
           const SizedBox(height: 12),
           PlaylistCarousel(
             playlists: normalPlaylists,
+            currentPlaylistId: currentPlaylistId,
+            isPlaying: isPlaying,
             onPlaylistTap: (playlist) {
               // 使用 push 保持导航栈，便于返回
               context.push('/playlists/${playlist.id}');
@@ -150,6 +155,8 @@ class HomePage extends ConsumerWidget {
           const SizedBox(height: 12),
           PlaylistCarousel(
             playlists: radioPlaylists,
+            currentPlaylistId: currentPlaylistId,
+            isPlaying: isPlaying,
             onPlaylistTap: (playlist) {
               // 使用 push 保持导航栈，便于返回
               context.push('/playlists/${playlist.id}');

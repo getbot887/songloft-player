@@ -173,11 +173,14 @@ class PlayerNotifier extends Notifier<PlayerState> {
       final savedIndex = prefs.getCurrentIndex();
       final safeIndex = savedIndex.clamp(0, savedQueue.length - 1);
       _savedPositionMs = prefs.getPositionMs();
+      final savedSourcePlaylistId = prefs.getSourcePlaylistId();
 
       state = state.copyWith(
         playlist: savedQueue,
         currentIndex: safeIndex,
         currentSong: savedQueue[safeIndex],
+        sourcePlaylistId: savedSourcePlaylistId,
+        clearSourcePlaylistId: savedSourcePlaylistId == null,
       );
 
       debugPrint(
@@ -203,6 +206,7 @@ class PlayerNotifier extends Notifier<PlayerState> {
             await _playbackStorage.saveQueue(state.playlist);
             await prefs.setCurrentIndex(state.currentIndex);
             await prefs.setPositionMs(state.currentTime.inMilliseconds);
+            await prefs.setSourcePlaylistId(state.sourcePlaylistId);
           }
         } catch (e) {
           debugPrint('[Player] Failed to save playback state: $e');
@@ -414,6 +418,7 @@ class PlayerNotifier extends Notifier<PlayerState> {
         playlist: newPlaylist,
         currentIndex: newIndex,
         currentSong: song,
+        clearSourcePlaylistId: true,
       );
       final gen = ++_playGeneration;
       await _playCurrent(gen);
@@ -424,7 +429,11 @@ class PlayerNotifier extends Notifier<PlayerState> {
   }
 
   /// 播放歌单
-  Future<void> playPlaylist(List<Song> songs, {int startIndex = 0}) async {
+  Future<void> playPlaylist(
+    List<Song> songs, {
+    int startIndex = 0,
+    int? sourcePlaylistId,
+  }) async {
     debugPrint(
       '[Player] playPlaylist: ${songs.length} songs, startIndex: $startIndex',
     );
@@ -451,6 +460,8 @@ class PlayerNotifier extends Notifier<PlayerState> {
       playlist: List.from(songs),
       currentIndex: safeIndex,
       currentSong: songs[safeIndex],
+      sourcePlaylistId: sourcePlaylistId,
+      clearSourcePlaylistId: sourcePlaylistId == null,
     );
 
     final gen = ++_playGeneration;
@@ -766,6 +777,7 @@ class PlayerNotifier extends Notifier<PlayerState> {
       isPlaying: false,
       currentTime: Duration.zero,
       duration: Duration.zero,
+      clearSourcePlaylistId: true,
     );
     _savePlaybackState();
   }
@@ -800,7 +812,7 @@ class PlayerNotifier extends Notifier<PlayerState> {
       }
 
       // playPlaylist 内部会递增 _loadGeneration，取消之前的后台加载
-      await playPlaylist(firstPageSongs);
+      await playPlaylist(firstPageSongs, sourcePlaylistId: playlistId);
 
       if (total > firstPageSongs.length) {
         // 记录当前代次，传给后台加载任务用于检测是否过期
@@ -1688,4 +1700,10 @@ final currentSongProvider = Provider<Song?>((ref) {
 final playerProgressProvider = Provider<double>((ref) {
   final state = ref.watch(playerStateProvider);
   return state.progress;
+});
+
+/// 便捷 Provider：当前播放队列的来源歌单 ID
+final sourcePlaylistIdProvider = Provider<int?>((ref) {
+  final state = ref.watch(playerStateProvider);
+  return state.sourcePlaylistId;
 });

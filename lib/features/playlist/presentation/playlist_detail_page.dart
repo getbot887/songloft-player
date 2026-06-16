@@ -1226,7 +1226,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     debugPrint('[Player] Play song: ${song.title} at index $index');
     ref
         .read(playerStateProvider.notifier)
-        .playPlaylist(songs, startIndex: index);
+        .playPlaylist(songs, startIndex: index, sourcePlaylistId: _playlistIdInt);
     ResponsiveSnackBar.show(context, message: '播放：${song.title}');
   }
 

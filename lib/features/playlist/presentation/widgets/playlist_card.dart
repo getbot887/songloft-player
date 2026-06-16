@@ -15,6 +15,8 @@ class PlaylistCard extends StatelessWidget {
   final bool isSelectionMode;
   final bool isSelected;
   final VoidCallback? onSelect;
+  final bool isCurrentPlaylist;
+  final bool isPlaying;
 
   const PlaylistCard({
     super.key,
@@ -27,6 +29,8 @@ class PlaylistCard extends StatelessWidget {
     this.isSelectionMode = false,
     this.isSelected = false,
     this.onSelect,
+    this.isCurrentPlaylist = false,
+    this.isPlaying = false,
   });
 
   @override
@@ -37,7 +41,7 @@ class PlaylistCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       shape:
-          isSelectionMode && isSelected
+          (isSelectionMode && isSelected) || isCurrentPlaylist
               ? RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(color: colorScheme.primary, width: 2),
@@ -69,6 +73,21 @@ class PlaylistCard extends StatelessWidget {
                                 _buildPlaceholder(colorScheme),
                       )
                       : _buildPlaceholder(colorScheme),
+
+                  // 正在播放指示器
+                  if (isCurrentPlaylist && isPlaying)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black54,
+                        child: Center(
+                          child: Icon(
+                            Icons.equalizer_rounded,
+                            size: 32,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // 播放全部按钮（右下角）
                   if (onPlayAll != null)
@@ -174,6 +193,9 @@ class PlaylistCard extends StatelessWidget {
                           playlist.name,
                           style: textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
+                            color: isCurrentPlaylist
+                                ? colorScheme.primary
+                                : null,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

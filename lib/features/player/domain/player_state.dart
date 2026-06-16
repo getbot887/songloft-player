@@ -103,6 +103,7 @@ class PlayerState {
   final double? previousVolume; // 静音前的音量（用于恢复）
   final String? errorMessage; // 当前错误消息，UI 层监听后显示 SnackBar
   final bool isRetrying; // 是否正在重试中
+  final int? sourcePlaylistId; // 当前播放队列的来源歌单 ID
 
   const PlayerState({
     this.currentSong,
@@ -120,6 +121,7 @@ class PlayerState {
     this.previousVolume,
     this.errorMessage,
     this.isRetrying = false,
+    this.sourcePlaylistId,
   });
 
   /// 初始状态
@@ -188,10 +190,12 @@ class PlayerState {
     double? previousVolume,
     String? errorMessage,
     bool? isRetrying,
+    int? sourcePlaylistId,
     bool clearCurrentSong = false,
     bool clearSleepTimer = false,
     bool clearPreviousVolume = false,
     bool clearErrorMessage = false,
+    bool clearSourcePlaylistId = false,
   }) {
     return PlayerState(
       currentSong: clearCurrentSong ? null : (currentSong ?? this.currentSong),
@@ -211,6 +215,9 @@ class PlayerState {
       errorMessage:
           clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
       isRetrying: isRetrying ?? this.isRetrying,
+      sourcePlaylistId: clearSourcePlaylistId
+          ? null
+          : (sourcePlaylistId ?? this.sourcePlaylistId),
     );
   }
 

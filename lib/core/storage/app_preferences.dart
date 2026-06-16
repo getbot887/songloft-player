@@ -18,6 +18,7 @@ class AppPreferences {
   static const _lastPasswordKey = 'last_password';
   static const _currentIndexKey = 'player_current_index';
   static const _positionMsKey = 'player_position_ms';
+  static const _sourcePlaylistIdKey = 'player_source_playlist_id';
 
   final SharedPreferences _prefs;
 
@@ -240,9 +241,19 @@ class AppPreferences {
     return _prefs.setInt(_positionMsKey, ms);
   }
 
+  int? getSourcePlaylistId() {
+    return _prefs.getInt(_sourcePlaylistIdKey);
+  }
+
+  Future<bool> setSourcePlaylistId(int? id) {
+    if (id == null) return _prefs.remove(_sourcePlaylistIdKey).then((_) => true);
+    return _prefs.setInt(_sourcePlaylistIdKey, id);
+  }
+
   Future<void> clearPlaybackState() async {
     await _prefs.remove(_currentIndexKey);
     await _prefs.remove(_positionMsKey);
+    await _prefs.remove(_sourcePlaylistIdKey);
   }
 
   /// 清除所有偏好设置
