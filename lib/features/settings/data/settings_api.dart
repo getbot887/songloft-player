@@ -462,4 +462,72 @@ class SettingsApi {
       throw ApiException.fromDioException(e);
     }
   }
+
+  // ---------- 刷新远程歌曲时长 ----------
+
+  Future<void> startDurationRefresh() async {
+    try {
+      await dio.post('${AppConfig.apiPrefix}/songs/refresh-duration');
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<DurationRefreshProgress> getDurationRefreshProgress() async {
+    try {
+      final response = await dio.get(
+        '${AppConfig.apiPrefix}/songs/refresh-duration/progress',
+      );
+      return DurationRefreshProgress.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<void> cancelDurationRefresh() async {
+    try {
+      await dio.post('${AppConfig.apiPrefix}/songs/refresh-duration/cancel');
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+}
+
+/// 远程歌曲时长刷新进度
+class DurationRefreshProgress {
+  final String status;
+  final int total;
+  final int processed;
+  final int failed;
+
+  const DurationRefreshProgress({
+    required this.status,
+    required this.total,
+    required this.processed,
+    required this.failed,
+  });
+
+  static const idle = DurationRefreshProgress(
+    status: 'idle',
+    total: 0,
+    processed: 0,
+    failed: 0,
+  );
+
+  factory DurationRefreshProgress.fromJson(Map<String, dynamic> json) {
+    return DurationRefreshProgress(
+      status: json['status'] as String? ?? 'idle',
+      total: json['total'] as int? ?? 0,
+      processed: json['processed'] as int? ?? 0,
+      failed: json['failed'] as int? ?? 0,
+    );
+  }
+
+  bool get isIdle => status == 'idle';
+  bool get isRunning => status == 'running' || status == 'cancelling';
+  bool get isDone => status == 'done' || status == 'cancelled' || status == 'failed';
+  int get completedCount => processed + failed;
+  double get progress => total > 0 ? completedCount / total : 0;
 }

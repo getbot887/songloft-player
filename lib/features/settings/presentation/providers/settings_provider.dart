@@ -684,3 +684,70 @@ class AudioQualityNotifier extends Notifier<String> {
 final audioQualityProvider = NotifierProvider<AudioQualityNotifier, String>(
   AudioQualityNotifier.new,
 );
+
+// ============================================================================
+// Duration Refresh Provider
+// ============================================================================
+
+class DurationRefreshNotifier extends Notifier<DurationRefreshProgress> {
+  late SettingsApi _api;
+  Timer? _pollTimer;
+
+  @override
+  DurationRefreshProgress build() {
+    _api = ref.watch(settingsApiProvider);
+    ref.onDispose(() {
+      _stopPolling();
+    });
+    return DurationRefreshProgress.idle;
+  }
+
+  Future<void> startRefresh() async {
+    try {
+      await _api.startDurationRefresh();
+      state = const DurationRefreshProgress(
+        status: 'running',
+        total: 0,
+        processed: 0,
+        failed: 0,
+      );
+      _startPolling();
+    } catch (_) {}
+  }
+
+  Future<void> refreshProgress() async {
+    try {
+      final progress = await _api.getDurationRefreshProgress();
+      state = progress;
+      if (progress.isDone) {
+        _stopPolling();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> cancel() async {
+    try {
+      await _api.cancelDurationRefresh();
+      _stopPolling();
+      await refreshProgress();
+    } catch (_) {}
+  }
+
+  void _startPolling() {
+    _stopPolling();
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => refreshProgress(),
+    );
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+}
+
+final durationRefreshProvider =
+    NotifierProvider<DurationRefreshNotifier, DurationRefreshProgress>(
+      DurationRefreshNotifier.new,
+    );
