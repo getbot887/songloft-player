@@ -42,6 +42,9 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
   /// 初始化 Future，用于确保初始化完成
   late final Future<void> _initFuture;
 
+  /// 切歌时间戳，用于在切歌后短时间内忽略蓝牙误发的暂停命令
+  DateTime? _lastSongChangeTime;
+
   SongloftAudioHandler() {
     // ★ 关键：使用官方示例的 pipe 模式直接绑定 playbackState
     // 这比手动 listen + add 更可靠，直接管道连接，无中间状态丢失
@@ -103,6 +106,13 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
           wasPlayingBeforeInterruption = _player.playing;
           if (event.type == AudioInterruptionType.pause ||
               event.type == AudioInterruptionType.unknown) {
+            // 切歌后 5 秒内忽略自动暂停（防止蓝牙误发暂停命令）
+            final lastChange = _lastSongChangeTime;
+            if (lastChange != null &&
+                DateTime.now().difference(lastChange).inSeconds < 5) {
+              debugPrint('[AudioService] 忽略切歌期间的自动暂停');
+              return;
+            }
             _player.pause();
           }
         } else {
@@ -385,6 +395,9 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
       // 导致之后的 mediaItem.add() 无法刷新到通知栏。
       // 提前更新 mediaItem，确保通知栏在 Service 重建时能读取到正确的元数据。
       _updateNowPlaying(song);
+
+      // 记录切歌时间，防止蓝牙在切歌期间误发暂停命令
+      _lastSongChangeTime = DateTime.now();
 
       // Web 平台需要 stop() 释放 HTML5 Audio 元素；
       // 原生平台不调用 stop()，setAudioSource() 会自动替换当前源。
