@@ -2,11 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/platform/live_activity_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
 import '../../../../core/utils/url_helper.dart';
-import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../domain/lyric_parser.dart';
 import 'player_provider.dart';
 
@@ -97,24 +95,7 @@ class LyricNotifier extends Notifier<LyricState> {
         state.currentLyricText,
         state.nextLyricText,
       );
-      _updateBluetoothLyrics(state.currentLyricText);
     }
-  }
-
-  /// 发送当前歌词到蓝牙车机
-  void _updateBluetoothLyrics(String lyrics) {
-    final btEnabled = ref.read(bluetoothLyricsEnabledProvider);
-    if (!btEnabled) return;
-
-    final compatMode = ref.read(bluetoothLyricsCompatModeProvider);
-    final song = ref.read(playerStateProvider).currentSong;
-
-    BluetoothLyricsService().updateLyrics(
-      lyrics: lyrics,
-      title: song?.title ?? '',
-      artist: song?.artist ?? '',
-      compatMode: compatMode,
-    );
   }
 
   Future<void> _loadLyrics(String? lyricUrl) async {
@@ -148,7 +129,6 @@ class LyricNotifier extends Notifier<LyricState> {
         state.currentLyricText,
         state.nextLyricText,
       );
-      _updateBluetoothLyrics(state.currentLyricText);
       return;
     }
 
@@ -176,7 +156,6 @@ class LyricNotifier extends Notifier<LyricState> {
         state.currentLyricText,
         state.nextLyricText,
       );
-      _updateBluetoothLyrics(state.currentLyricText);
 
       if (lyricText.isNotEmpty) {
         await LyricCacheService().put(lyricUrl, lyricText);

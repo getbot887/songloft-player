@@ -11,7 +11,6 @@ import 'package:just_audio/just_audio.dart' as ja;
 
 import '../../features/playlist/domain/playlist.dart';
 import '../../shared/models/song.dart';
-import '../platform/bluetooth_lyrics_service.dart';
 import '../utils/url_helper.dart';
 import 'media_browse_data_source.dart';
 
@@ -24,6 +23,10 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
   VoidCallback? onSkipToNext;
   VoidCallback? onSkipToPrevious;
   VoidCallback? onSongCompleted;
+
+  /// 当 play() 被调用但没有加载歌曲时的回调
+  /// 由 PlayerNotifier 注入，用于恢复上次播放状态
+  Future<void> Function()? onPlayFromIdle;
 
   /// Android Auto 媒体浏览数据源（由 PlayerNotifier 注入）
   MediaBrowseDataSource? mediaBrowseDataSource;
@@ -170,8 +173,19 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
   // 官方示例：audio_service Android 端通过调用这些覆写方法来响应通知栏按钮点击
 
   @override
-  Future<void> play() {
+  Future<void> play() async {
     debugPrint('[AudioService] ▶️ play() 被调用');
+    
+    // 如果没有加载歌曲，尝试恢复上次播放（车机蓝牙自动播放场景）
+    if (_player.audioSource == null && onPlayFromIdle != null) {
+      debugPrint('[AudioService] 没有歌曲，尝试恢复上次播放');
+      try {
+        await onPlayFromIdle!();
+      } catch (e) {
+        debugPrint('[AudioService] onPlayFromIdle 失败: $e');
+      }
+    }
+    
     return _player.play();
   }
 
@@ -463,9 +477,6 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
 
     mediaItem.add(item);
     debugPrint('[AudioService] MediaItem added to stream');
-
-    // 通知蓝牙歌词服务：歌曲切换，重置内部状态
-    BluetoothLyricsService().onSongChanged();
   }
 
   /// 更新通知栏元数据的 duration（当获取到实际时长时调用）

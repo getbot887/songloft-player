@@ -315,8 +315,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       '192': '中 (192kbps)',
       '320': '高 (320kbps)',
     };
-    final btLyricsEnabled = ref.watch(bluetoothLyricsEnabledProvider);
-    final btLyricsCompat = ref.watch(bluetoothLyricsCompatModeProvider);
 
     return [
       SectionCard(
@@ -380,50 +378,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: '车载蓝牙歌词',
         icon: Icons.bluetooth_outlined,
         children: [
-          SwitchListTile(
-            secondary: const Icon(Icons.lyrics_outlined),
-            title: const Text('开启蓝牙歌词'),
-            subtitle: const Text(
-              '播放歌曲时通过蓝牙向车机发送歌词，'
-              '需车机支持 AVRCP 1.6',
-            ),
-            value: btLyricsEnabled,
-            onChanged: (value) async {
-              try {
-                await ref
-                    .read(bluetoothLyricsEnabledProvider.notifier)
-                    .setValue(value);
-              } catch (e) {
-                if (!mounted) return;
-                ResponsiveSnackBar.showError(context, message: '保存失败: $e');
-              }
-            },
-          ),
-          const Divider(height: 1),
-          SwitchListTile(
-            secondary: const Icon(Icons.auto_fix_high_outlined),
-            title: const Text('歌词兼容模式'),
+          const ListTile(
+            leading: Icon(Icons.lyrics_outlined),
+            title: Text('蓝牙歌词'),
             subtitle: Text(
-              btLyricsEnabled
-                  ? '将歌词替换歌名显示，兼容老旧车机'
-                  : '需先开启蓝牙歌词',
+              '连接蓝牙音频设备时自动显示歌词，无需手动设置',
             ),
-            value: btLyricsCompat,
-            onChanged: btLyricsEnabled
-                ? (value) async {
-                    try {
-                      await ref
-                          .read(bluetoothLyricsCompatModeProvider.notifier)
-                          .setValue(value);
-                    } catch (e) {
-                      if (!mounted) return;
-                      ResponsiveSnackBar.showError(
-                        context,
-                        message: '保存失败: $e',
-                      );
-                    }
-                  }
-                : null,
+            trailing: Icon(Icons.check_circle_outline),
           ),
         ],
       ),

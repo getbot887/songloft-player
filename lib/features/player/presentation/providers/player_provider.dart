@@ -79,6 +79,17 @@ class PlayerNotifier extends Notifier<PlayerState> {
     _audioHandler.onSkipToPrevious = () => playPrev();
     _audioHandler.onSongCompleted = _onSongCompleted;
 
+    // 车机蓝牙自动播放：当 play() 被调用但没有歌曲时，恢复上次播放状态
+    _audioHandler.onPlayFromIdle = () async {
+      debugPrint('[Player] onPlayFromIdle: 尝试恢复上次播放状态');
+      final prefs = await ref.read(appPreferencesProvider.future);
+      await _restorePlaybackState(prefs);
+      if (state.currentSong != null) {
+        debugPrint('[Player] onPlayFromIdle: 恢复成功，开始播放');
+        await playSong(state.currentSong!);
+      }
+    };
+
     // 切歌前主动通知后端 cancel 旧 song 的进行中工作（issue #79）。
     // fire-and-forget：不阻塞 setAudioSource，失败也不影响播放主路径。
     _audioHandler.notifySongActivated = (int songId) {

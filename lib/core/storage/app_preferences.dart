@@ -213,29 +213,6 @@ class AppPreferences {
     return _prefs.setString(_audioQualityKey, quality);
   }
 
-  /// 获取蓝牙车载歌词开关
-  bool getBluetoothLyricsEnabled() {
-    return _prefs.getBool(_bluetoothLyricsEnabledKey) ?? false;
-  }
-
-  /// 设置蓝牙车载歌词开关
-  Future<bool> setBluetoothLyricsEnabled(bool enabled) {
-    return _prefs.setBool(_bluetoothLyricsEnabledKey, enabled);
-  }
-
-  /// 获取蓝牙歌词兼容模式开关（障眼法模式）
-  bool getBluetoothLyricsCompatMode() {
-    return _prefs.getBool(_bluetoothLyricsCompatModeKey) ?? false;
-  }
-
-  /// 设置蓝牙歌词兼容模式开关
-  Future<bool> setBluetoothLyricsCompatMode(bool enabled) {
-    return _prefs.setBool(_bluetoothLyricsCompatModeKey, enabled);
-  }
-
-  static const _bluetoothLyricsEnabledKey = 'bluetooth_lyrics_enabled';
-  static const _bluetoothLyricsCompatModeKey = 'bluetooth_lyrics_compat_mode';
-
   static const _localCacheMaxSizeKey = 'local_cache_max_size';
 
   /// 获取本地缓存大小上限（字节），默认 1 GB，0 表示不限制

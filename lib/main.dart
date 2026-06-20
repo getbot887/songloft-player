@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/app_config.dart';
 import 'core/audio/audio_service.dart';
 import 'core/env/tv_detector.dart';
-import 'core/platform/bluetooth_lyrics_service.dart';
+import 'core/platform/bluetooth_detection_service.dart';
 import 'core/storage/app_preferences.dart';
 import 'core/storage/secure_storage.dart';
 import 'core/tracely/tracely_client.dart';
@@ -27,6 +27,7 @@ import 'core/theme/responsive.dart';
 import 'core/router/app_router.dart';
 import 'core/utils/platform_utils.dart';
 import 'core/utils/window_tray_manager.dart';
+import 'features/player/presentation/providers/bluetooth_lyrics_provider.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 import 'features/startup/presentation/startup_gate.dart';
 
@@ -227,9 +228,9 @@ void main(List<String> args) async {
     };
   }
 
-  // 初始化蓝牙车载歌词服务（仅 Android）
+  // 初始化蓝牙检测服务（仅 Android）
   if (!kIsWeb && Platform.isAndroid) {
-    BluetoothLyricsService().init(audioHandler);
+    await BluetoothDetectionService().init();
   }
 
   runApp(
@@ -237,6 +238,9 @@ void main(List<String> args) async {
       overrides: [
         // 将 audioHandler 注入到 Riverpod 中
         audioHandlerProvider.overrideWithValue(audioHandler),
+        // 确保蓝牙歌词 Provider 始终激活（不依赖 UI 监听）
+        if (!kIsWeb && Platform.isAndroid)
+          bluetoothLyricsProvider.overrideWith(() => BluetoothLyricsNotifier()),
       ],
       child: const StartupGate(child: SongloftApp()),
     ),
