@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 /// 蓝牙音频设备检测服务
 ///
-/// 使用 audio_session 插件检测蓝牙音频设备（A2DP/SCO）的连接状态。
-/// 当蓝牙设备连接/断开时，通过流通知监听者。
+/// 通过 MethodChannel 检测蓝牙音频设备连接状态。
 class BluetoothDetectionService {
   static final BluetoothDetectionService _instance = BluetoothDetectionService._();
   factory BluetoothDetectionService() => _instance;
   BluetoothDetectionService._();
+
+  static const _channel = MethodChannel('com.songloft/bluetooth_detection');
 
   /// 蓝牙连接状态流控制器
   final _bluetoothConnectedController = StreamController<bool>.broadcast();
@@ -31,23 +32,23 @@ class BluetoothDetectionService {
     if (kIsWeb || !Platform.isAndroid) return;
 
     try {
-      final session = await AudioSession.instance;
-      await session.configure(const AudioSessionConfiguration.music());
-
-      // 监听音频设备变化
-      session.devicesChangeStream.listen((devices) {
-        final hasBluetooth = devices.output.any((d) =>
-            d.type == AudioDeviceType.bluetoothA2dp ||
-            d.type == AudioDeviceType.bluetoothSco);
-
-        if (hasBluetooth != _isBluetoothConnected) {
-          _isBluetoothConnected = hasBluetooth;
-          _bluetoothConnectedController.add(hasBluetooth);
-          debugPrint('[BluetoothDetection] 蓝牙状态变化: ${hasBluetooth ? "已连接" : "已断开"}');
+      // 设置回调，接收原生端的蓝牙状态变化通知
+      _channel.setMethodCallHandler((call) async {
+        if (call.method == 'onBluetoothStateChanged') {
+          final connected = call.arguments as bool? ?? false;
+          if (connected != _isBluetoothConnected) {
+            _isBluetoothConnected = connected;
+            _bluetoothConnectedController.add(connected);
+            debugPrint('[BluetoothDetection] 蓝牙状态变化: ${connected ? "已连接" : "已断开"}');
+          }
         }
       });
 
-      debugPrint('[BluetoothDetection] 初始化完成, 等待蓝牙设备连接事件');
+      // 查询初始蓝牙状态
+      final result = await _channel.invokeMethod<bool>('isBluetoothConnected');
+      _isBluetoothConnected = result ?? false;
+
+      debugPrint('[BluetoothDetection] 初始化完成, 蓝牙状态: ${_isBluetoothConnected ? "已连接" : "未连接"}');
       _initialized = true;
     } catch (e) {
       debugPrint('[BluetoothDetection] 初始化失败: $e');
