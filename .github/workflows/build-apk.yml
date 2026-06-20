@@ -35,11 +35,9 @@ jobs:
         run: echo "version=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}')" >> $GITHUB_OUTPUT
 
       - name: Delete old release
-        uses: dev-drprasad/delete-tag-and-release@v1
-        with:
-          tag: latest
-          delete_release: true
-        continue-on-error: true
+        run: gh release delete latest --yes --repo ${{ github.repository }} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
