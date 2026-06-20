@@ -58,6 +58,24 @@
                 <action android:name="android.media.action.OPEN_AUDIO_EFFECTS_CONTROL_PANEL"/>
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
+            <!-- 处理音频文件（Android 15 默认音乐应用识别） -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content"/>
+                <data android:mimeType="audio/*"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="file"/>
+                <data android:mimeType="audio/*"/>
+            </intent-filter>
+            <!-- 语音搜索播放 -->
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
@@ -99,6 +117,13 @@
         </intent>
         <intent>
             <action android:name="android.media.action.OPEN_AUDIO_EFFECTS_CONTROL_PANEL"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:mimeType="audio/*"/>
+        </intent>
+        <intent>
+            <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"/>
         </intent>
     </queries>
 </manifest>
