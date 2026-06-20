@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/app_config.dart';
 import 'core/audio/audio_service.dart';
 import 'core/env/tv_detector.dart';
+import 'core/platform/bluetooth_lyrics_service.dart';
 import 'core/storage/app_preferences.dart';
 import 'core/storage/secure_storage.dart';
 import 'core/tracely/tracely_client.dart';
@@ -224,6 +225,11 @@ void main(List<String> args) async {
       await audioHandler.stop();
       await audioHandler.dispose();
     };
+  }
+
+  // 初始化蓝牙车载歌词服务（仅 Android）
+  if (!kIsWeb && Platform.isAndroid) {
+    BluetoothLyricsService().init();
   }
 
   runApp(
