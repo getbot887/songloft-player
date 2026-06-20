@@ -113,7 +113,6 @@ class LyricNotifier extends Notifier<LyricState> {
       lyrics: lyrics,
       title: song?.title ?? '',
       artist: song?.artist ?? '',
-      album: song?.album ?? '',
       compatMode: compatMode,
     );
   }

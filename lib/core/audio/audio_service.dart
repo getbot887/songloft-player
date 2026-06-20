@@ -451,14 +451,8 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
     mediaItem.add(item);
     debugPrint('[AudioService] MediaItem added to stream');
 
-    // 通知蓝牙歌词服务：歌曲切换，更新原生端缓存的原始元数据
-    BluetoothLyricsService().updateSongInfo(
-      title: song.title,
-      artist: song.artist ?? '未知艺术家',
-      album: song.album ?? '',
-      artUri: artUri?.toString() ?? '',
-      duration: (song.duration * 1000).toInt(),
-    );
+    // 通知蓝牙歌词服务：歌曲切换，重置内部状态
+    BluetoothLyricsService().onSongChanged();
   }
 
   /// 更新通知栏元数据的 duration（当获取到实际时长时调用）

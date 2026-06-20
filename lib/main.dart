@@ -229,7 +229,7 @@ void main(List<String> args) async {
 
   // 初始化蓝牙车载歌词服务（仅 Android）
   if (!kIsWeb && Platform.isAndroid) {
-    BluetoothLyricsService().init();
+    BluetoothLyricsService().init(audioHandler);
   }
 
   runApp(
