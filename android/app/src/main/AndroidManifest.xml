@@ -40,7 +40,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
-                <category android:name="android.intent.category.APP_MUSIC"/>
             </intent-filter>
             <!-- TV Launcher intent filter -->
             <intent-filter>
@@ -50,26 +49,23 @@
             <!-- 注册为音乐播放器，使系统「默认音乐应用」可发现本应用 -->
             <intent-filter>
                 <action android:name="android.intent.action.MUSIC_PLAYER"/>
-                <category android:name="android.intent.category.APP_MUSIC"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-            </intent-filter>
-            <!-- 音频效果控制面板（部分系统用此识别音乐播放器） -->
-            <intent-filter>
-                <action android:name="android.media.action.OPEN_AUDIO_EFFECTS_CONTROL_PANEL"/>
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
             <!-- 处理音频文件（Android 15 默认音乐应用识别） -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="file"/>
                 <data android:scheme="content"/>
+                <data android:scheme="http"/>
+                <data android:scheme="https"/>
                 <data android:mimeType="audio/*"/>
             </intent-filter>
+            <!-- 音频效果控制面板（部分系统用此识别音乐播放器） -->
             <intent-filter>
-                <action android:name="android.intent.action.VIEW"/>
+                <action android:name="android.media.action.OPEN_AUDIO_EFFECTS_CONTROL_PANEL"/>
                 <category android:name="android.intent.category.DEFAULT"/>
-                <data android:scheme="file"/>
-                <data android:mimeType="audio/*"/>
             </intent-filter>
             <!-- 语音搜索播放 -->
             <intent-filter>
