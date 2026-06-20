@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -27,3 +29,25 @@ jobs:
         with:
           name: songloft-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Get version
+        id: version
+        run: echo "version=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}')" >> $GITHUB_OUTPUT
+
+      - name: Delete old release
+        uses: dev-drprasad/delete-tag-and-release@v1
+        with:
+          tag: latest
+          delete_release: true
+        continue-on-error: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Songloft ${{ steps.version.outputs.version }}
+          body: |
+            自动构建 - ${{ github.sha }}
+            基于 commit: ${{ github.event.head_commit.message }}
+          files: build/app/outputs/flutter-apk/app-release.apk
+          prerelease: true
