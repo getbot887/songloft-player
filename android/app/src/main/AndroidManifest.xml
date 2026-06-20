@@ -40,6 +40,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+                <category android:name="android.intent.category.APP_MUSIC"/>
             </intent-filter>
             <!-- TV Launcher intent filter -->
             <intent-filter>
@@ -50,6 +51,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MUSIC_PLAYER"/>
                 <category android:name="android.intent.category.APP_MUSIC"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+            <!-- 音频效果控制面板（部分系统用此识别音乐播放器） -->
+            <intent-filter>
+                <action android:name="android.media.action.OPEN_AUDIO_EFFECTS_CONTROL_PANEL"/>
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
@@ -87,6 +93,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MUSIC_PLAYER"/>
+        </intent>
+        <intent>
+            <action android:name="android.media.action.OPEN_AUDIO_EFFECTS_CONTROL_PANEL"/>
         </intent>
     </queries>
 </manifest>
