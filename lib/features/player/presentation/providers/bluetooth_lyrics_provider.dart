@@ -6,7 +6,7 @@ import '../../../../core/platform/bluetooth_detection_service.dart';
 import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
 import '../../../../core/utils/url_helper.dart';
-import '../../../main.dart';
+import '../../../../main.dart';
 import '../../domain/lyric_parser.dart';
 import 'player_provider.dart';
 
@@ -45,7 +45,6 @@ final bluetoothLyricsProvider =
 
 class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   String? _lastLoadedLyricUrl;
-  final BluetoothDetectionService _btDetection = BluetoothDetectionService();
   final BluetoothLyricsService _btLyrics = BluetoothLyricsService();
 
   @override
@@ -54,8 +53,9 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
     final audioHandler = ref.watch(audioHandlerProvider);
     _btLyrics.init(audioHandler);
 
-    // 监听蓝牙连接状态
-    ref.listen(bluetoothConnectedProvider, (prev, isConnected) {
+    // 监听蓝牙连接状态（StreamProvider 发出 AsyncValue<bool>）
+    ref.listen(bluetoothConnectedProvider, (prev, asyncValue) {
+      final isConnected = asyncValue.valueOrNull ?? false;
       debugPrint('[BluetoothLyrics] 蓝牙状态变化: $isConnected');
       state = state.copyWith(isBluetoothConnected: isConnected);
       if (!isConnected) {
@@ -67,6 +67,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
     // 监听当前歌曲变化
     ref.listen(playerStateProvider.select((s) => s.currentSong), (prev, next) {
       debugPrint('[BluetoothLyrics] 歌曲变化: ${next?.title}');
+      _btLyrics.onSongChanged();
       _loadLyrics(next?.lyricUrl);
     });
 
@@ -156,6 +157,8 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
 }
 
 /// 蓝牙连接状态 Provider（供 bluetoothLyricsProvider 监听）
-final bluetoothConnectedProvider = Provider<bool>((ref) {
-  return BluetoothDetectionService().isBluetoothConnected;
+///
+/// 使用 StreamProvider 监听原生端蓝牙状态变化事件，保持响应式。
+final bluetoothConnectedProvider = StreamProvider<bool>((ref) {
+  return BluetoothDetectionService().isBluetoothConnectedStream;
 });
