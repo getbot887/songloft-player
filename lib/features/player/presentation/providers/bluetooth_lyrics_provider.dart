@@ -55,7 +55,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
 
     // 监听蓝牙连接状态（StreamProvider 发出 AsyncValue<bool>）
     ref.listen(bluetoothConnectedProvider, (prev, asyncValue) {
-      final isConnected = asyncValue.valueOrNull ?? false;
+      final isConnected = asyncValue.value ?? false;
       debugPrint('[BluetoothLyrics] 蓝牙状态变化: $isConnected');
       state = state.copyWith(isBluetoothConnected: isConnected);
       if (!isConnected) {
