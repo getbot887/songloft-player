@@ -16,6 +16,7 @@
     <application
         android:label="Songloft"
         android:name="${applicationName}"
+        android:appCategory="audio"
         android:icon="@mipmap/ic_launcher"
         android:banner="@mipmap/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -61,6 +62,38 @@
                 <data android:scheme="http"/>
                 <data android:scheme="https"/>
                 <data android:mimeType="audio/*"/>
+            </intent-filter>
+            <!-- 常见音频格式文件关联 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="file"/>
+                <data android:scheme="content"/>
+                <data android:scheme="http"/>
+                <data android:scheme="https"/>
+                <data android:pathPattern=".*\\.mp3"/>
+                <data android:pathPattern=".*\\.MP3"/>
+                <data android:pathPattern=".*\\.flac"/>
+                <data android:pathPattern=".*\\.FLAC"/>
+                <data android:pathPattern=".*\\.wav"/>
+                <data android:pathPattern=".*\\.WAV"/>
+                <data android:pathPattern=".*\\.aac"/>
+                <data android:pathPattern=".*\\.AAC"/>
+                <data android:pathPattern=".*\\.ogg"/>
+                <data android:pathPattern=".*\\.OGG"/>
+                <data android:pathPattern=".*\\.opus"/>
+                <data android:pathPattern=".*\\.OPUS"/>
+                <data android:pathPattern=".*\\.m4a"/>
+                <data android:pathPattern=".*\\.M4A"/>
+                <data android:pathPattern=".*\\.wma"/>
+                <data android:pathPattern=".*\\.WMA"/>
+                <data android:pathPattern=".*\\.ape"/>
+                <data android:pathPattern=".*\\.APE"/>
+                <data android:pathPattern=".*\\.dts"/>
+                <data android:pathPattern=".*\\.DTS"/>
+                <data android:pathPattern=".*\\.ac3"/>
+                <data android:pathPattern=".*\\.AC3"/>
             </intent-filter>
             <!-- 音频效果控制面板（部分系统用此识别音乐播放器） -->
             <intent-filter>
