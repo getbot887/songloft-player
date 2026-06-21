@@ -41,18 +41,27 @@ jobs:
           echo "version=${BASE_VERSION}" >> $GITHUB_OUTPUT
           echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Delete old latest release
-        run: gh release delete latest --yes --repo ${{ github.repository }} || true
+      - name: Delete old latest tag
+        run: gh api repos/${{ github.repository }}/git/refs/tags/latest -X DELETE 2>/dev/null || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
+          tag_name: build-${{ github.run_number }}
           name: Songloft ${{ steps.version.outputs.full_version }}
           body: |
-            自动构建 #${{ github.run_number }} - ${{ github.sha }}
-            基于 commit: ${{ github.event.head_commit.message }}
+            自动构建 #${{ github.run_number }}
+            版本: ${{ steps.version.outputs.full_version }}
+            Commit: ${{ github.sha }}
+            ${{ github.event.head_commit.message }}
           files: build/app/outputs/flutter-apk/songloft-arm64-v8a.apk
           prerelease: true
+
+      - name: Update latest tag
+        run: |
+          git tag -f latest
+          git push -f origin latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
