@@ -19,6 +19,8 @@ class AppPreferences {
   static const _currentIndexKey = 'player_current_index';
   static const _positionMsKey = 'player_position_ms';
   static const _sourcePlaylistIdKey = 'player_source_playlist_id';
+  static const _bluetoothLyricsModeKey = 'bluetooth_lyrics_mode';
+  static const _bluetoothDeviceNamesKey = 'bluetooth_device_names';
 
   final SharedPreferences _prefs;
 
@@ -254,6 +256,29 @@ class AppPreferences {
     await _prefs.remove(_currentIndexKey);
     await _prefs.remove(_positionMsKey);
     await _prefs.remove(_sourcePlaylistIdKey);
+  }
+
+  /// 蓝牙歌词模式
+  /// 返回 'off' / 'lyrics_screen_only' / 'always' / 'specific_device' / 'force'
+  String getBluetoothLyricsMode() {
+    return _prefs.getString(_bluetoothLyricsModeKey) ?? 'off';
+  }
+
+  /// 设置蓝牙歌词模式
+  Future<bool> setBluetoothLyricsMode(String mode) {
+    return _prefs.setString(_bluetoothLyricsModeKey, mode);
+  }
+
+  /// 蓝牙设备名称列表（逗号分隔），仅 specific_device 模式使用
+  List<String> getBluetoothDeviceNames() {
+    final raw = _prefs.getString(_bluetoothDeviceNamesKey);
+    if (raw == null || raw.isEmpty) return const [];
+    return raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+  }
+
+  /// 设置蓝牙设备名称列表
+  Future<bool> setBluetoothDeviceNames(List<String> names) {
+    return _prefs.setString(_bluetoothDeviceNamesKey, names.join(','));
   }
 
   /// 清除所有偏好设置

@@ -79,6 +79,9 @@ class MainActivity : AudioServiceActivity() {
                 "isBluetoothConnected" -> {
                     result.success(isBluetoothConnected())
                 }
+                "getConnectedDeviceNames" -> {
+                    result.success(getConnectedDeviceNames())
+                }
                 else -> result.notImplemented()
             }
         }
@@ -93,5 +96,25 @@ class MainActivity : AudioServiceActivity() {
         val scoState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET)
         if (scoState == BluetoothProfile.STATE_CONNECTED) return true
         return false
+    }
+
+    private fun getConnectedDeviceNames(): List<String> {
+        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter() ?: return emptyList()
+        val names = mutableListOf<String>()
+        // 获取 A2DP 已连接设备
+        try {
+            val a2dpDevices = bluetoothAdapter.getConnectedDevices(BluetoothProfile.A2DP)
+            for (device in a2dpDevices) {
+                device.name?.let { names.add(it) }
+            }
+        } catch (_: SecurityException) {}
+        // 获取 HEADSET 已连接设备（去重）
+        try {
+            val headsetDevices = bluetoothAdapter.getConnectedDevices(BluetoothProfile.HEADSET)
+            for (device in headsetDevices) {
+                device.name?.let { if (it !in names) names.add(it) }
+            }
+        } catch (_: SecurityException) {}
+        return names
     }
 }

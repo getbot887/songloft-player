@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/platform/bluetooth_detection_service.dart';
+
 import '../../../config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/base_url_provider.dart';
@@ -378,17 +380,116 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: '车载蓝牙歌词',
         icon: Icons.bluetooth_outlined,
         children: [
-          const ListTile(
-            leading: Icon(Icons.lyrics_outlined),
-            title: Text('蓝牙歌词'),
-            subtitle: Text(
-              '连接蓝牙音频设备时自动显示歌词，无需手动设置',
-            ),
-            trailing: Icon(Icons.check_circle_outline),
-          ),
+          _buildBluetoothLyricsModeSelector(context, ref),
         ],
       ),
     ];
+  }
+
+  Widget _buildBluetoothLyricsModeSelector(BuildContext context, WidgetRef ref) {
+    final currentMode = ref.watch(bluetoothLyricsModeProvider);
+    final deviceNames = ref.watch(bluetoothDeviceNamesProvider);
+
+    return Column(
+      children: [
+        _buildModeRadio(
+          ref,
+          value: BluetoothLyricsMode.off,
+          groupValue: currentMode,
+          title: '关闭',
+          subtitle: '不推送蓝牙歌词',
+        ),
+        _buildModeRadio(
+          ref,
+          value: BluetoothLyricsMode.lyricsScreenOnly,
+          groupValue: currentMode,
+          title: '仅歌词页',
+          subtitle: '打开歌词界面才推送，需蓝牙连接',
+        ),
+        _buildModeRadio(
+          ref,
+          value: BluetoothLyricsMode.always,
+          groupValue: currentMode,
+          title: '蓝牙自动',
+          subtitle: '后台推送，需蓝牙连接',
+        ),
+        _buildModeRadio(
+          ref,
+          value: BluetoothLyricsMode.specificDevice,
+          groupValue: currentMode,
+          title: '指定设备',
+          subtitle: '后台推送，只匹配设置的蓝牙设备',
+        ),
+        _buildModeRadio(
+          ref,
+          value: BluetoothLyricsMode.force,
+          groupValue: currentMode,
+          title: '强制推送',
+          subtitle: '忽略蓝牙状态，始终推送',
+        ),
+        if (currentMode == BluetoothLyricsMode.specificDevice) ...[
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '蓝牙设备名称',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '输入设备名称（多个用逗号分隔，模糊匹配）',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  initialValue: deviceNames.join(', '),
+                  decoration: const InputDecoration(
+                    hintText: 'Car Audio, My BMW, BT-5678',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: (value) {
+                    final names = value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .where((s) => s.isNotEmpty)
+                        .toList();
+                    ref.read(bluetoothDeviceNamesProvider.notifier).setNames(names);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildModeRadio(
+    WidgetRef ref, {
+    required String value,
+    required String groupValue,
+    required String title,
+    required String subtitle,
+  }) {
+    return RadioListTile<String>(
+      value: value,
+      groupValue: groupValue,
+      onChanged: (newValue) {
+        if (newValue != null) {
+          ref.read(bluetoothLyricsModeProvider.notifier).setMode(newValue);
+        }
+      },
+      title: Text(title),
+      subtitle: Text(subtitle),
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+    );
   }
 
   // ── 音乐库管理 ──

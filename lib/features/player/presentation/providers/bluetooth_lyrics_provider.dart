@@ -7,6 +7,7 @@ import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
 import '../../../../core/utils/url_helper.dart';
 import '../../../../main.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/lyric_parser.dart';
 import 'player_provider.dart';
 
@@ -15,29 +16,34 @@ class BluetoothLyricsState {
   final bool isBluetoothConnected;
   final List<LyricLine> lyrics;
   final int currentIndex;
+  final String mode;
 
   const BluetoothLyricsState({
     this.isBluetoothConnected = false,
     this.lyrics = const [],
     this.currentIndex = -1,
+    this.mode = BluetoothLyricsMode.off,
   });
 
   BluetoothLyricsState copyWith({
     bool? isBluetoothConnected,
     List<LyricLine>? lyrics,
     int? currentIndex,
+    String? mode,
   }) {
     return BluetoothLyricsState(
       isBluetoothConnected: isBluetoothConnected ?? this.isBluetoothConnected,
       lyrics: lyrics ?? this.lyrics,
       currentIndex: currentIndex ?? this.currentIndex,
+      mode: mode ?? this.mode,
     );
   }
 }
 
 /// 独立的蓝牙歌词 Provider
 ///
-/// 始终激活，不依赖歌词 UI。自动根据蓝牙连接状态启停歌词推送。
+/// 处理 always / specific_device / force 模式（后台推送，不依赖歌词 UI）。
+/// lyrics_screen_only 模式由 lyricStateProvider 处理。
 final bluetoothLyricsProvider =
     NotifierProvider<BluetoothLyricsNotifier, BluetoothLyricsState>(
   BluetoothLyricsNotifier.new,
@@ -47,6 +53,13 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   String? _lastLoadedLyricUrl;
   final BluetoothLyricsService _btLyrics = BluetoothLyricsService();
   final BluetoothDetectionService _btDetection = BluetoothDetectionService();
+
+  /// 当前模式是否需要后台推送
+  bool _isBackgroundMode(String mode) {
+    return mode == BluetoothLyricsMode.always ||
+        mode == BluetoothLyricsMode.specificDevice ||
+        mode == BluetoothLyricsMode.force;
+  }
 
   @override
   BluetoothLyricsState build() {
@@ -79,7 +92,24 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
       _updateCurrentLine(next);
     });
 
-    return BluetoothLyricsState(isBluetoothConnected: initialConnected);
+    // 加载初始模式
+    _loadMode();
+
+    return BluetoothLyricsState(
+      isBluetoothConnected: initialConnected,
+      mode: BluetoothLyricsMode.off,
+    );
+  }
+
+  /// 从 SharedPreferences 加载当前模式
+  void _loadMode() async {
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      final mode = prefs.getBluetoothLyricsMode();
+      state = state.copyWith(mode: mode);
+    } catch (e) {
+      debugPrint('[BluetoothLyrics] 加载模式失败: $e');
+    }
   }
 
   /// 加载歌词
@@ -128,21 +158,32 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   }
 
   /// 更新当前歌词行
-  void _updateCurrentLine(Duration position) {
+  void _updateCurrentLine(Duration position) async {
     if (state.lyrics.isEmpty) return;
-    if (!state.isBluetoothConnected) return;
 
     final newIndex = LyricParser.findCurrentLine(state.lyrics, position);
     if (newIndex != state.currentIndex) {
       state = state.copyWith(currentIndex: newIndex);
+
+      // 检查当前模式是否允许推送
+      if (!_isBackgroundMode(state.mode)) return;
+
+      final prefs = await ref.read(appPreferencesProvider.future);
+      final mode = prefs.getBluetoothLyricsMode();
+      final deviceNames = prefs.getBluetoothDeviceNames();
+
+      final shouldPush = await _btDetection.shouldPushLyrics(
+        mode: mode,
+        deviceNames: deviceNames,
+      );
+      if (!shouldPush) return;
+
       _sendLyricsToBluetooth();
     }
   }
 
   /// 发送歌词到蓝牙
   void _sendLyricsToBluetooth() {
-    if (!state.isBluetoothConnected) return;
-
     final song = ref.read(playerStateProvider).currentSong;
     if (song == null) return;
 
@@ -154,7 +195,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
       lyrics: lyrics,
       title: song.title,
       artist: song.artist ?? '',
-      compatMode: false, // 默认使用标准模式
+      compatMode: false,
     );
   }
 }

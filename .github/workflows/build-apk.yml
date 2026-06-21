@@ -35,9 +35,13 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "version=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}')" >> $GITHUB_OUTPUT
+        run: |
+          BASE_VERSION=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}')
+          FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
+          echo "version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+          echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Delete old release
+      - name: Delete old latest release
         run: gh release delete latest --yes --repo ${{ github.repository }} || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,9 +50,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Songloft ${{ steps.version.outputs.version }}
+          name: Songloft ${{ steps.version.outputs.full_version }}
           body: |
-            自动构建 - ${{ github.sha }}
+            自动构建 #${{ github.run_number }} - ${{ github.sha }}
             基于 commit: ${{ github.event.head_commit.message }}
           files: build/app/outputs/flutter-apk/songloft-arm64-v8a.apk
           prerelease: true
