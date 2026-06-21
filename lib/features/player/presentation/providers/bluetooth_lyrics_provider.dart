@@ -46,6 +46,7 @@ final bluetoothLyricsProvider =
 class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   String? _lastLoadedLyricUrl;
   final BluetoothLyricsService _btLyrics = BluetoothLyricsService();
+  final BluetoothDetectionService _btDetection = BluetoothDetectionService();
 
   @override
   BluetoothLyricsState build() {
@@ -53,16 +54,18 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
     final audioHandler = ref.watch(audioHandlerProvider);
     _btLyrics.init(audioHandler);
 
-    // 监听蓝牙连接状态（StreamProvider 发出 AsyncValue<bool>）
-    ref.listen(bluetoothConnectedProvider, (prev, asyncValue) {
-      final isConnected = asyncValue.value ?? false;
-      debugPrint('[BluetoothLyrics] 蓝牙状态变化: $isConnected');
-      state = state.copyWith(isBluetoothConnected: isConnected);
-      if (!isConnected) {
-        // 蓝牙断开，恢复原始歌名
+    // 直接读取当前蓝牙状态（避免 StreamProvider 丢失初始值）
+    final initialConnected = _btDetection.isBluetoothConnected;
+
+    // 订阅蓝牙状态变化流
+    final sub = _btDetection.isBluetoothConnectedStream.listen((connected) {
+      debugPrint('[BluetoothLyrics] 蓝牙状态变化: $connected');
+      state = state.copyWith(isBluetoothConnected: connected);
+      if (!connected) {
         _btLyrics.restoreMetadata();
       }
     });
+    ref.onDispose(sub.cancel);
 
     // 监听当前歌曲变化
     ref.listen(playerStateProvider.select((s) => s.currentSong), (prev, next) {
@@ -76,7 +79,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
       _updateCurrentLine(next);
     });
 
-    return const BluetoothLyricsState();
+    return BluetoothLyricsState(isBluetoothConnected: initialConnected);
   }
 
   /// 加载歌词
@@ -155,10 +158,3 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
     );
   }
 }
-
-/// 蓝牙连接状态 Provider（供 bluetoothLyricsProvider 监听）
-///
-/// 使用 StreamProvider 监听原生端蓝牙状态变化事件，保持响应式。
-final bluetoothConnectedProvider = StreamProvider<bool>((ref) {
-  return BluetoothDetectionService().isBluetoothConnectedStream;
-});

@@ -283,6 +283,8 @@ class SongloftApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    // 确保蓝牙歌词 Provider 始终激活
+    ref.watch(bluetoothLyricsProvider);
     return MaterialApp.router(
       title: 'Songloft',
       debugShowCheckedModeBanner: false,
