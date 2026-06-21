@@ -101,20 +101,42 @@ class MainActivity : AudioServiceActivity() {
     private fun getConnectedDeviceNames(): List<String> {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter() ?: return emptyList()
         val names = mutableListOf<String>()
+        val latch = java.util.concurrent.CountDownLatch(2)
+
         // 获取 A2DP 已连接设备
         try {
-            val a2dpDevices = bluetoothAdapter.getConnectedDevices(BluetoothProfile.A2DP)
-            for (device in a2dpDevices) {
-                device.name?.let { names.add(it) }
-            }
-        } catch (_: SecurityException) {}
+            bluetoothAdapter.getProfileProxy(this, object : android.bluetooth.BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                    for (device in proxy.connectedDevices) {
+                        device.name?.let { if (it !in names) names.add(it) }
+                    }
+                    bluetoothAdapter.closeProfileProxy(profile, proxy)
+                    latch.countDown()
+                }
+                override fun onServiceDisconnected(profile: Int) {
+                    latch.countDown()
+                }
+            }, BluetoothProfile.A2DP)
+        } catch (_: SecurityException) { latch.countDown() }
+
         // 获取 HEADSET 已连接设备（去重）
         try {
-            val headsetDevices = bluetoothAdapter.getConnectedDevices(BluetoothProfile.HEADSET)
-            for (device in headsetDevices) {
-                device.name?.let { if (it !in names) names.add(it) }
-            }
-        } catch (_: SecurityException) {}
+            bluetoothAdapter.getProfileProxy(this, object : android.bluetooth.BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                    for (device in proxy.connectedDevices) {
+                        device.name?.let { if (it !in names) names.add(it) }
+                    }
+                    bluetoothAdapter.closeProfileProxy(profile, proxy)
+                    latch.countDown()
+                }
+                override fun onServiceDisconnected(profile: Int) {
+                    latch.countDown()
+                }
+            }, BluetoothProfile.HEADSET)
+        } catch (_: SecurityException) { latch.countDown() }
+
+        // 等待两个 profile 回调完成（最多 3 秒）
+        try { latch.await(3, java.util.concurrent.TimeUnit.SECONDS) } catch (_: InterruptedException) {}
         return names
     }
 }
