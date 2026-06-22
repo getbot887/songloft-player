@@ -126,6 +126,8 @@ class MainActivity : AudioServiceActivity() {
                     val duration = call.argument<Number>("duration")?.toLong() ?: 0
                     val compatMode = call.argument<Boolean>("compatMode") ?: false
 
+                    android.util.Log.d("BTLyrics", "收到 updateLyrics: lyrics=\"$lyrics\", title=\"$title\", compatMode=$compatMode")
+
                     // 缓存原始元数据（首次收到时）
                     if (originalTitle == null && title.isNotEmpty()) {
                         originalTitle = title
@@ -133,6 +135,7 @@ class MainActivity : AudioServiceActivity() {
                         originalAlbum = album
                         originalArtUri = artUri
                         originalDuration = duration
+                        android.util.Log.d("BTLyrics", "缓存原始元数据: title=$title, artist=$artist")
                     }
 
                     updateLyricsOnMediaSession(lyrics, title, artist, album, artUri, duration, compatMode)
@@ -140,6 +143,7 @@ class MainActivity : AudioServiceActivity() {
                 }
 
                 "restoreMetadata" -> {
+                    android.util.Log.d("BTLyrics", "收到 restoreMetadata")
                     restoreMetadata()
                     result.success(true)
                 }
@@ -158,6 +162,7 @@ class MainActivity : AudioServiceActivity() {
                     originalArtUri = artUri
                     originalDuration = duration
 
+                    android.util.Log.d("BTLyrics", "收到 updateSongInfo: title=$title, artist=$artist")
                     result.success(true)
                 }
 
@@ -174,12 +179,21 @@ class MainActivity : AudioServiceActivity() {
             val audioServiceClass = AudioService::class.java
             val instanceField = audioServiceClass.getDeclaredField("instance")
             instanceField.isAccessible = true
-            val instance = instanceField.get(null) ?: return null
+            val instance = instanceField.get(null)
+            if (instance == null) {
+                android.util.Log.w("BTLyrics", "AudioService.instance 为 null")
+                return null
+            }
 
             val mediaSessionField = audioServiceClass.getDeclaredField("mediaSession")
             mediaSessionField.isAccessible = true
-            mediaSessionField.get(instance) as? MediaSessionCompat
+            val mediaSession = mediaSessionField.get(instance) as? MediaSessionCompat
+            if (mediaSession == null) {
+                android.util.Log.w("BTLyrics", "AudioService.mediaSession 为 null")
+            }
+            mediaSession
         } catch (e: Exception) {
+            android.util.Log.e("BTLyrics", "反射获取 MediaSession 失败", e)
             null
         }
     }
@@ -196,7 +210,11 @@ class MainActivity : AudioServiceActivity() {
         duration: Long,
         compatMode: Boolean,
     ) {
-        val mediaSession = getMediaSession() ?: return
+        val mediaSession = getMediaSession()
+        if (mediaSession == null) {
+            android.util.Log.w("BTLyrics", "MediaSession 为空，无法更新歌词")
+            return
+        }
 
         try {
             val currentMetadata = mediaSession.controller?.metadata
@@ -225,14 +243,17 @@ class MainActivity : AudioServiceActivity() {
                     builder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, originalTitle ?: title)
                     builder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, originalArtist ?: artist)
                 }
+                android.util.Log.d("BTLyrics", "兼容模式更新: title=${builder.build().getString(MediaMetadataCompat.METADATA_KEY_TITLE)}")
             } else {
                 // 标准模式：写入 METADATA_KEY_lyrics
                 builder.putString(METADATA_KEY_LYRICS, lyrics)
+                android.util.Log.d("BTLyrics", "标准模式更新: lyrics=\"$lyrics\"")
             }
 
             mediaSession.setMetadata(builder.build())
+            android.util.Log.d("BTLyrics", "MediaSession.setMetadata 成功")
         } catch (e: Exception) {
-            // 静默失败，不影响播放
+            android.util.Log.e("BTLyrics", "MediaSession.setMetadata 失败", e)
         }
     }
 
@@ -240,7 +261,10 @@ class MainActivity : AudioServiceActivity() {
      * 恢复原始歌曲元数据
      */
     private fun restoreMetadata() {
-        if (originalTitle == null) return
+        if (originalTitle == null) {
+            android.util.Log.d("BTLyrics", "restoreMetadata: 原始元数据为空，跳过")
+            return
+        }
 
         val mediaSession = getMediaSession() ?: return
 
@@ -263,8 +287,9 @@ class MainActivity : AudioServiceActivity() {
             builder.putString(METADATA_KEY_LYRICS, "")
 
             mediaSession.setMetadata(builder.build())
+            android.util.Log.d("BTLyrics", "restoreMetadata 成功: title=$originalTitle")
         } catch (e: Exception) {
-            // 静默失败
+            android.util.Log.e("BTLyrics", "restoreMetadata 失败", e)
         }
     }
 

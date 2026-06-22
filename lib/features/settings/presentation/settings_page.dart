@@ -35,6 +35,7 @@ import 'widgets/theme_selector.dart';
 import 'widgets/frontend_upgrade_dialog.dart';
 import 'widgets/upgrade_dialog.dart';
 import 'providers/settings_provider.dart';
+import 'debug_log_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -381,6 +382,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         icon: Icons.bluetooth_outlined,
         children: [
           _buildBluetoothLyricsModeSelector(context, ref),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.bug_report_outlined),
+            title: const Text('查看调试日志'),
+            subtitle: const Text('查看蓝牙歌词推送的运行日志'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const DebugLogPage(),
+                ),
+              );
+            },
+          ),
         ],
       ),
     ];

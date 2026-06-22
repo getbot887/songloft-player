@@ -26,6 +26,7 @@ import 'core/tracely/tracely_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/responsive.dart';
 import 'core/router/app_router.dart';
+import 'core/utils/debug_log_service.dart';
 import 'core/utils/platform_utils.dart';
 import 'core/utils/window_tray_manager.dart';
 import 'features/player/presentation/providers/bluetooth_lyrics_provider.dart';
@@ -228,6 +229,9 @@ void main(List<String> args) async {
       await audioHandler.dispose();
     };
   }
+
+  // 初始化调试日志服务
+  await DebugLogService().init();
 
   // 初始化蓝牙检测服务（仅 Android）
   if (!kIsWeb && Platform.isAndroid) {

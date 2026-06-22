@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../utils/debug_log_service.dart';
+
 /// 蓝牙车载歌词服务
 ///
 /// 通过 MethodChannel 与 Android 原生层通信，
@@ -18,6 +20,7 @@ class BluetoothLyricsService {
   BluetoothLyricsService._();
 
   static const _channel = MethodChannel('com.songloft/bluetooth_lyrics');
+  final DebugLogService _log = DebugLogService();
 
   bool get _isApplicable => !kIsWeb && Platform.isAndroid;
 
@@ -56,7 +59,10 @@ class BluetoothLyricsService {
     int duration = 0,
     bool compatMode = false,
   }) async {
-    if (!_isApplicable) return;
+    if (!_isApplicable) {
+      _log.log('BTLyrics', '跳过: 非 Android 平台');
+      return;
+    }
 
     // 兼容模式下不做过滤（需要刷新空格技巧）
     if (!compatMode && lyrics == _lastLyrics) return;
@@ -67,6 +73,7 @@ class BluetoothLyricsService {
     final effectiveLyrics = lyrics;
 
     try {
+      _log.log('BTLyrics', '推送歌词: "$effectiveLyrics", title=$title, compatMode=$compatMode');
       await _channel.invokeMethod('updateLyrics', {
         'lyrics': effectiveLyrics,
         'title': title,
@@ -76,8 +83,9 @@ class BluetoothLyricsService {
         'duration': duration,
         'compatMode': compatMode,
       });
+      _log.log('BTLyrics', '推送成功');
     } catch (e) {
-      debugPrint('[BluetoothLyrics] updateLyrics failed: $e');
+      _log.log('BTLyrics', '推送失败: $e');
     }
   }
 

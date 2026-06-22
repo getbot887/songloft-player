@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../utils/debug_log_service.dart';
+
 /// 蓝牙歌词模式常量
 class BluetoothLyricsMode {
   static const off = 'off';
@@ -22,6 +24,7 @@ class BluetoothDetectionService {
   BluetoothDetectionService._();
 
   static const _channel = MethodChannel('com.songloft/bluetooth_detection');
+  final DebugLogService _log = DebugLogService();
 
   /// 蓝牙连接状态流控制器
   final _bluetoothConnectedController = StreamController<bool>.broadcast();
@@ -38,7 +41,10 @@ class BluetoothDetectionService {
   /// 初始化蓝牙检测服务
   Future<void> init() async {
     if (_initialized) return;
-    if (kIsWeb || !Platform.isAndroid) return;
+    if (kIsWeb || !Platform.isAndroid) {
+      _log.log('BT', '跳过初始化: 非 Android 平台');
+      return;
+    }
 
     try {
       // 设置回调，接收原生端的蓝牙状态变化通知
@@ -48,7 +54,7 @@ class BluetoothDetectionService {
           if (connected != _isBluetoothConnected) {
             _isBluetoothConnected = connected;
             _bluetoothConnectedController.add(connected);
-            debugPrint('[BluetoothDetection] 蓝牙状态变化: ${connected ? "已连接" : "已断开"}');
+            _log.log('BT', '蓝牙状态变化: ${connected ? "已连接" : "已断开"}');
           }
         }
       });
@@ -57,10 +63,10 @@ class BluetoothDetectionService {
       final result = await _channel.invokeMethod<bool>('isBluetoothConnected');
       _isBluetoothConnected = result ?? false;
 
-      debugPrint('[BluetoothDetection] 初始化完成, 蓝牙状态: ${_isBluetoothConnected ? "已连接" : "未连接"}');
+      _log.log('BT', '初始化完成, 蓝牙: ${_isBluetoothConnected ? "已连接" : "未连接"}');
       _initialized = true;
     } catch (e) {
-      debugPrint('[BluetoothDetection] 初始化失败: $e');
+      _log.log('BT', '初始化失败: $e');
     }
   }
 
@@ -86,25 +92,43 @@ class BluetoothDetectionService {
     required List<String> deviceNames,
     bool isLyricsScreenOpen = false,
   }) async {
+    bool result;
     switch (mode) {
       case BluetoothLyricsMode.off:
-        return false;
+        result = false;
+        break;
       case BluetoothLyricsMode.lyricsScreenOnly:
-        if (!isLyricsScreenOpen) return false;
-        return _isBluetoothConnected;
+        if (!isLyricsScreenOpen) {
+          _log.log('BT', 'lyricsScreenOnly: 歌词页未打开');
+          return false;
+        }
+        result = _isBluetoothConnected;
+        break;
       case BluetoothLyricsMode.always:
-        return _isBluetoothConnected;
+        result = _isBluetoothConnected;
+        break;
       case BluetoothLyricsMode.specificDevice:
-        if (!_isBluetoothConnected) return false;
-        if (deviceNames.isEmpty) return false;
+        if (!_isBluetoothConnected) {
+          _log.log('BT', 'specificDevice: 蓝牙未连接');
+          return false;
+        }
+        if (deviceNames.isEmpty) {
+          _log.log('BT', 'specificDevice: 未设置设备名');
+          return false;
+        }
         final connectedNames = await getConnectedDeviceNames();
-        return connectedNames.any((c) =>
+        _log.log('BT', 'specificDevice: 已连接设备=$connectedNames, 目标设备=$deviceNames');
+        result = connectedNames.any((c) =>
             deviceNames.any((t) => c.toLowerCase().contains(t.trim().toLowerCase())));
+        break;
       case BluetoothLyricsMode.force:
-        return true;
+        result = true;
+        break;
       default:
-        return false;
+        result = false;
     }
+    _log.log('BT', 'shouldPushLyrics: mode=$mode, result=$result');
+    return result;
   }
 
   void dispose() {

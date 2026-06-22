@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/platform/bluetooth_detection_service.dart';
 import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
+import '../../../../core/utils/debug_log_service.dart';
 import '../../../../core/utils/url_helper.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/lyric_parser.dart';
@@ -52,15 +53,19 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   String? _lastLoadedLyricUrl;
   final BluetoothLyricsService _btLyrics = BluetoothLyricsService();
   final BluetoothDetectionService _btDetection = BluetoothDetectionService();
+  final DebugLogService _log = DebugLogService();
 
   @override
   BluetoothLyricsState build() {
+    _log.log('BTLyrics', 'Provider 初始化');
+
     // 直接读取当前蓝牙状态（避免 StreamProvider 丢失初始值）
     final initialConnected = _btDetection.isBluetoothConnected;
+    _log.log('BTLyrics', '初始蓝牙状态: $initialConnected');
 
     // 订阅蓝牙状态变化流
     final sub = _btDetection.isBluetoothConnectedStream.listen((connected) {
-      debugPrint('[BluetoothLyrics] 蓝牙状态变化: $connected');
+      _log.log('BTLyrics', '蓝牙状态变化: $connected');
       state = state.copyWith(isBluetoothConnected: connected);
       if (!connected) {
         _btLyrics.restoreMetadata();
@@ -70,7 +75,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
 
     // 监听当前歌曲变化
     ref.listen(playerStateProvider.select((s) => s.currentSong), (prev, next) {
-      debugPrint('[BluetoothLyrics] 歌曲变化: ${next?.title}');
+      _log.log('BTLyrics', '歌曲变化: ${next?.title}, lyricUrl=${next?.lyricUrl}');
       // 通知原生端更新缓存的元数据（同时重置内部状态）
       _btLyrics.updateSongInfo(
         title: next?.title ?? '',
@@ -108,6 +113,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   /// 加载歌词
   Future<void> _loadLyrics(String? lyricUrl) async {
     if (lyricUrl == null || lyricUrl.isEmpty) {
+      _log.log('BTLyrics', '歌词URL为空，跳过加载');
       _lastLoadedLyricUrl = null;
       state = state.copyWith(lyrics: [], currentIndex: -1);
       return;
@@ -115,6 +121,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
 
     if (_lastLoadedLyricUrl == lyricUrl && state.lyrics.isNotEmpty) return;
 
+    _log.log('BTLyrics', '开始加载歌词: $lyricUrl');
     state = state.copyWith(lyrics: [], currentIndex: -1);
 
     // 先尝试缓存
@@ -123,12 +130,14 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
       _lastLoadedLyricUrl = lyricUrl;
       final lyrics = LyricParser.parse(cached);
       state = state.copyWith(lyrics: lyrics);
+      _log.log('BTLyrics', '从缓存加载歌词成功, ${lyrics.length} 行');
       return;
     }
 
     // 从网络加载
     try {
       final fullUrl = UrlHelper.buildLyricUrl(lyricUrl);
+      _log.log('BTLyrics', '从网络加载歌词: $fullUrl');
       final response = await Dio().get<Map<String, dynamic>>(fullUrl);
 
       String lyricText = '';
@@ -141,12 +150,13 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
       _lastLoadedLyricUrl = lyricUrl;
       final lyrics = LyricParser.parse(lyricText);
       state = state.copyWith(lyrics: lyrics);
+      _log.log('BTLyrics', '网络加载歌词成功, ${lyrics.length} 行');
 
       if (lyricText.isNotEmpty) {
         await LyricCacheService().put(lyricUrl, lyricText);
       }
     } catch (e) {
-      debugPrint('[BluetoothLyrics] 加载歌词失败: $e');
+      _log.log('BTLyrics', '加载歌词失败: $e');
     }
   }
 
@@ -157,17 +167,23 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
     final newIndex = LyricParser.findCurrentLine(state.lyrics, position);
     if (newIndex != state.currentIndex) {
       state = state.copyWith(currentIndex: newIndex);
+      _log.log('BTLyrics', '歌词行变化: $newIndex, 歌词: "${state.lyrics[newIndex].text}"');
 
       // 从 SharedPreferences 实时读取模式（不依赖缓存的 state.mode）
       final prefs = await ref.read(appPreferencesProvider.future);
       final mode = prefs.getBluetoothLyricsMode();
       final deviceNames = prefs.getBluetoothDeviceNames();
 
+      _log.log('BTLyrics', '当前模式: $mode');
+
       final shouldPush = await _btDetection.shouldPushLyrics(
         mode: mode,
         deviceNames: deviceNames,
       );
-      if (!shouldPush) return;
+      if (!shouldPush) {
+        _log.log('BTLyrics', 'shouldPushLyrics=false, 跳过推送');
+        return;
+      }
 
       _sendLyricsToBluetooth();
     }
