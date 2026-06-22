@@ -7,7 +7,6 @@ import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/platform/live_activity_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
 import '../../../../core/utils/url_helper.dart';
-import '../../../../main.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/lyric_parser.dart';
 import 'player_provider.dart';
@@ -126,10 +125,6 @@ class LyricNotifier extends Notifier<LyricState> {
       final lyrics = state.currentIndex >= 0 && state.currentIndex < state.lyrics.length
           ? state.lyrics[state.currentIndex].text
           : '';
-
-      // 确保 audioHandler 已初始化
-      final audioHandler = ref.read(audioHandlerProvider);
-      _btLyrics.init(audioHandler);
 
       _btLyrics.updateLyrics(
         lyrics: lyrics,

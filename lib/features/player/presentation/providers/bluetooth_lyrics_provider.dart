@@ -6,7 +6,6 @@ import '../../../../core/platform/bluetooth_detection_service.dart';
 import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
 import '../../../../core/utils/url_helper.dart';
-import '../../../../main.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/lyric_parser.dart';
 import 'player_provider.dart';
@@ -54,19 +53,8 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   final BluetoothLyricsService _btLyrics = BluetoothLyricsService();
   final BluetoothDetectionService _btDetection = BluetoothDetectionService();
 
-  /// 当前模式是否需要后台推送
-  bool _isBackgroundMode(String mode) {
-    return mode == BluetoothLyricsMode.always ||
-        mode == BluetoothLyricsMode.specificDevice ||
-        mode == BluetoothLyricsMode.force;
-  }
-
   @override
   BluetoothLyricsState build() {
-    // 初始化蓝牙歌词服务，传入 audio handler
-    final audioHandler = ref.watch(audioHandlerProvider);
-    _btLyrics.init(audioHandler);
-
     // 直接读取当前蓝牙状态（避免 StreamProvider 丢失初始值）
     final initialConnected = _btDetection.isBluetoothConnected;
 
@@ -83,7 +71,12 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
     // 监听当前歌曲变化
     ref.listen(playerStateProvider.select((s) => s.currentSong), (prev, next) {
       debugPrint('[BluetoothLyrics] 歌曲变化: ${next?.title}');
-      _btLyrics.onSongChanged();
+      // 通知原生端更新缓存的元数据（同时重置内部状态）
+      _btLyrics.updateSongInfo(
+        title: next?.title ?? '',
+        artist: next?.artist ?? '',
+        album: next?.album ?? '',
+      );
       _loadLyrics(next?.lyricUrl);
     });
 
@@ -165,9 +158,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
     if (newIndex != state.currentIndex) {
       state = state.copyWith(currentIndex: newIndex);
 
-      // 检查当前模式是否允许推送
-      if (!_isBackgroundMode(state.mode)) return;
-
+      // 从 SharedPreferences 实时读取模式（不依赖缓存的 state.mode）
       final prefs = await ref.read(appPreferencesProvider.future);
       final mode = prefs.getBluetoothLyricsMode();
       final deviceNames = prefs.getBluetoothDeviceNames();
@@ -195,7 +186,6 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
       lyrics: lyrics,
       title: song.title,
       artist: song.artist ?? '',
-      compatMode: false,
     );
   }
 }

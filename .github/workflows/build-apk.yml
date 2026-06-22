@@ -22,6 +22,11 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Set dynamic version
+        run: |
+          RUN_NUM=${{ github.run_number }}
+          sed -i "s/^version: .*/version: 2.8.6.${RUN_NUM}+${RUN_NUM}/" pubspec.yaml
+
       - run: flutter pub get
       - run: flutter build apk --release --target-platform android-arm64
 
@@ -37,9 +42,9 @@ jobs:
         id: version
         run: |
           BASE_VERSION=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}')
-          FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
+          DISPLAY_VERSION=$(echo "$BASE_VERSION" | cut -d'+' -f1)
           echo "version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-          echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
+          echo "display_version=${DISPLAY_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Delete old latest tag
         run: gh api repos/${{ github.repository }}/git/refs/tags/latest -X DELETE 2>/dev/null || true
@@ -50,10 +55,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Songloft ${{ steps.version.outputs.full_version }}
+          name: Songloft ${{ steps.version.outputs.display_version }}
           body: |
             自动构建 #${{ github.run_number }}
-            版本: ${{ steps.version.outputs.full_version }}
+            版本: ${{ steps.version.outputs.display_version }}
             Commit: ${{ github.sha }}
             ${{ github.event.head_commit.message }}
           files: build/app/outputs/flutter-apk/songloft-arm64-v8a.apk
