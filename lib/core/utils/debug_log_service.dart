@@ -19,11 +19,20 @@ class DebugLogService {
 
   final Queue<LogEntry> _logs = Queue<LogEntry>();
 
+  /// 日志开关（默认开启）
+  bool _enabled = true;
+
   /// 日志变化回调（用于 UI 刷新）
   VoidCallback? onLogAdded;
 
   /// 日志文件路径
   String? _logFilePath;
+
+  /// 设置日志开关
+  set enabled(bool value) => _enabled = value;
+
+  /// 获取日志开关状态
+  bool get isEnabled => _enabled;
 
   /// 初始化（获取日志文件路径）
   Future<void> init() async {
@@ -38,6 +47,12 @@ class DebugLogService {
 
   /// 添加日志
   void log(String tag, String message) {
+    // 日志开关关闭时，只输出到 debugPrint，不存储
+    if (!_enabled) {
+      debugPrint('[$tag] $message');
+      return;
+    }
+
     final entry = LogEntry(
       tag: tag,
       message: message,

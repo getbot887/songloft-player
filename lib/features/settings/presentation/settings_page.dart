@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/platform/bluetooth_detection_service.dart';
+import '../../../core/utils/debug_log_service.dart';
 
 import '../../../config/app_config.dart';
 import '../../../core/network/api_client.dart';
@@ -383,6 +384,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: '调试工具',
         icon: Icons.build_outlined,
         children: [
+          SwitchListTile(
+            title: const Text('调试日志'),
+            subtitle: const Text('记录蓝牙歌词推送的运行日志'),
+            value: ref.watch(debugLogEnabledProvider),
+            onChanged: (value) {
+              ref.read(debugLogEnabledProvider.notifier).setEnabled(value);
+              DebugLogService().enabled = value;
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.bug_report_outlined),
             title: const Text('查看调试日志'),

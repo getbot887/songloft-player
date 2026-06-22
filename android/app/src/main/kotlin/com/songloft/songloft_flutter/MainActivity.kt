@@ -119,6 +119,7 @@ class MainActivity : AudioServiceActivity() {
             when (call.method) {
                 "updateLyrics" -> {
                     val lyrics = call.argument<String>("lyrics") ?: ""
+                    val nextLyrics = call.argument<String>("nextLyrics") ?: ""
                     val title = call.argument<String>("title") ?: ""
                     val artist = call.argument<String>("artist") ?: ""
                     val album = call.argument<String>("album") ?: ""
@@ -126,7 +127,7 @@ class MainActivity : AudioServiceActivity() {
                     val duration = call.argument<Number>("duration")?.toLong() ?: 0
                     val compatMode = call.argument<Boolean>("compatMode") ?: false
 
-                    android.util.Log.d("BTLyrics", "收到 updateLyrics: lyrics=\"$lyrics\", title=\"$title\", compatMode=$compatMode")
+                    android.util.Log.d("BTLyrics", "收到 updateLyrics: lyrics=\"$lyrics\", nextLyrics=\"$nextLyrics\", compatMode=$compatMode")
 
                     // 缓存原始元数据（首次收到时）
                     if (originalTitle == null && title.isNotEmpty()) {
@@ -138,7 +139,7 @@ class MainActivity : AudioServiceActivity() {
                         android.util.Log.d("BTLyrics", "缓存原始元数据: title=$title, artist=$artist")
                     }
 
-                    updateLyricsOnMediaSession(lyrics, title, artist, album, artUri, duration, compatMode)
+                    updateLyricsOnMediaSession(lyrics, nextLyrics, title, artist, album, artUri, duration, compatMode)
                     result.success(true)
                 }
 
@@ -203,6 +204,7 @@ class MainActivity : AudioServiceActivity() {
      */
     private fun updateLyricsOnMediaSession(
         lyrics: String,
+        nextLyrics: String,
         title: String,
         artist: String,
         album: String,
@@ -225,9 +227,12 @@ class MainActivity : AudioServiceActivity() {
             }
 
             if (compatMode) {
-                // 兼容模式（障眼法）：将歌词替换歌名，歌手改为 "原歌名 - 原歌手"
+                // 兼容模式：歌名=当前歌词，歌手=下一行歌词，专辑=原歌名-歌手
                 if (lyrics.isNotEmpty()) {
                     builder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, lyrics)
+                    // 歌手位置显示下一行歌词（预告）
+                    builder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, nextLyrics)
+                    // 专辑位置显示原歌名-歌手
                     val originalInfo = buildString {
                         if (title.isNotEmpty()) append(title)
                         if (artist.isNotEmpty()) {
@@ -236,14 +241,17 @@ class MainActivity : AudioServiceActivity() {
                         }
                     }
                     if (originalInfo.isNotEmpty()) {
-                        builder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, originalInfo)
+                        builder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, originalInfo)
                     }
                 } else {
-                    // 空歌词时恢复原始歌名
+                    // 空歌词时恢复原始信息
                     builder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, originalTitle ?: title)
                     builder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, originalArtist ?: artist)
+                    if (originalAlbum != null) {
+                        builder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, originalAlbum)
+                    }
                 }
-                android.util.Log.d("BTLyrics", "兼容模式更新: title=${builder.build().getString(MediaMetadataCompat.METADATA_KEY_TITLE)}")
+                android.util.Log.d("BTLyrics", "兼容模式更新: title=$lyrics, artist=$nextLyrics")
             } else {
                 // 标准模式：写入 METADATA_KEY_lyrics
                 builder.putString(METADATA_KEY_LYRICS, lyrics)

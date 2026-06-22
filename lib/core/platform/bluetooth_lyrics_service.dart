@@ -52,6 +52,7 @@ class BluetoothLyricsService {
   /// [compatMode] 是否使用兼容模式（障眼法）
   Future<void> updateLyrics({
     required String lyrics,
+    required String nextLyrics,
     required String title,
     required String artist,
     String album = '',
@@ -76,6 +77,7 @@ class BluetoothLyricsService {
       _log.log('BTLyrics', '推送歌词: "$effectiveLyrics", title=$title, compatMode=$compatMode');
       await _channel.invokeMethod('updateLyrics', {
         'lyrics': effectiveLyrics,
+        'nextLyrics': nextLyrics,
         'title': title,
         'artist': artist,
         'album': album,

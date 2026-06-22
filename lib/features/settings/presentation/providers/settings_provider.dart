@@ -855,3 +855,39 @@ final bluetoothCompatModeProvider =
     NotifierProvider<BluetoothCompatModeNotifier, bool>(
       BluetoothCompatModeNotifier.new,
     );
+
+// ============================================================================
+// 调试日志开关 Provider
+// ============================================================================
+
+/// 调试日志开关 Notifier
+class DebugLogEnabledNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    _load();
+    return true;
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      state = prefs.getDebugLogEnabled();
+    } catch (_) {
+      state = true;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      await prefs.setDebugLogEnabled(enabled);
+    } catch (_) {}
+  }
+}
+
+/// 调试日志开关 Provider
+final debugLogEnabledProvider =
+    NotifierProvider<DebugLogEnabledNotifier, bool>(
+      DebugLogEnabledNotifier.new,
+    );

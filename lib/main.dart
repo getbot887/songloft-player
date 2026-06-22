@@ -232,6 +232,9 @@ void main(List<String> args) async {
 
   // 初始化调试日志服务
   await DebugLogService().init();
+  // 读取日志开关状态
+  final debugPrefs = await SharedPreferences.getInstance();
+  DebugLogService().enabled = debugPrefs.getBool('debug_log_enabled') ?? true;
 
   // 初始化蓝牙检测服务（仅 Android）
   if (!kIsWeb && Platform.isAndroid) {

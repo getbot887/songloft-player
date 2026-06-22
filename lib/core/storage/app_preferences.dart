@@ -22,6 +22,7 @@ class AppPreferences {
   static const _bluetoothLyricsModeKey = 'bluetooth_lyrics_mode';
   static const _bluetoothDeviceNamesKey = 'bluetooth_device_names';
   static const _bluetoothCompatModeKey = 'bluetooth_compat_mode';
+  static const _debugLogEnabledKey = 'debug_log_enabled';
 
   final SharedPreferences _prefs;
 
@@ -290,6 +291,16 @@ class AppPreferences {
   /// 设置蓝牙兼容模式
   Future<bool> setBluetoothCompatMode(bool enabled) {
     return _prefs.setBool(_bluetoothCompatModeKey, enabled);
+  }
+
+  /// 获取调试日志开关状态
+  bool getDebugLogEnabled() {
+    return _prefs.getBool(_debugLogEnabledKey) ?? true;
+  }
+
+  /// 设置调试日志开关
+  Future<bool> setDebugLogEnabled(bool enabled) {
+    return _prefs.setBool(_debugLogEnabledKey, enabled);
   }
 
   /// 清除所有偏好设置

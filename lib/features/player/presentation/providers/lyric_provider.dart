@@ -126,10 +126,16 @@ class LyricNotifier extends Notifier<LyricState> {
           ? state.lyrics[state.currentIndex].text
           : '';
 
+      final nextIndex = state.currentIndex + 1;
+      final nextLyrics = nextIndex >= 0 && nextIndex < state.lyrics.length
+          ? state.lyrics[nextIndex].text
+          : '';
+
       final compatMode = prefs.getBluetoothCompatMode();
 
       _btLyrics.updateLyrics(
         lyrics: lyrics,
+        nextLyrics: nextLyrics,
         title: song.title,
         artist: song.artist ?? '',
         compatMode: compatMode,

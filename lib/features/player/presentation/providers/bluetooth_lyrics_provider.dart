@@ -198,14 +198,21 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
         ? state.lyrics[state.currentIndex].text
         : '';
 
+    // 获取下一行歌词
+    final nextIndex = state.currentIndex + 1;
+    final nextLyrics = nextIndex >= 0 && nextIndex < state.lyrics.length
+        ? state.lyrics[nextIndex].text
+        : '';
+
     // 读取兼容模式设置
     final prefs = await ref.read(appPreferencesProvider.future);
     final compatMode = prefs.getBluetoothCompatMode();
 
-    _log.log('BTLyrics', '发送歌词: "$lyrics", compatMode=$compatMode');
+    _log.log('BTLyrics', '发送歌词: "$lyrics", 下一行: "$nextLyrics", compatMode=$compatMode');
 
     _btLyrics.updateLyrics(
       lyrics: lyrics,
+      nextLyrics: nextLyrics,
       title: song.title,
       artist: song.artist ?? '',
       compatMode: compatMode,
