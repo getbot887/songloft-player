@@ -21,6 +21,7 @@ class AppPreferences {
   static const _sourcePlaylistIdKey = 'player_source_playlist_id';
   static const _bluetoothLyricsModeKey = 'bluetooth_lyrics_mode';
   static const _bluetoothDeviceNamesKey = 'bluetooth_device_names';
+  static const _bluetoothCompatModeKey = 'bluetooth_compat_mode';
 
   final SharedPreferences _prefs;
 
@@ -279,6 +280,16 @@ class AppPreferences {
   /// 设置蓝牙设备名称列表
   Future<bool> setBluetoothDeviceNames(List<String> names) {
     return _prefs.setString(_bluetoothDeviceNamesKey, names.join(','));
+  }
+
+  /// 获取蓝牙兼容模式状态
+  bool getBluetoothCompatMode() {
+    return _prefs.getBool(_bluetoothCompatModeKey) ?? false;
+  }
+
+  /// 设置蓝牙兼容模式
+  Future<bool> setBluetoothCompatMode(bool enabled) {
+    return _prefs.setBool(_bluetoothCompatModeKey, enabled);
   }
 
   /// 清除所有偏好设置

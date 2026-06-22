@@ -819,3 +819,39 @@ final bluetoothDeviceNamesProvider =
     NotifierProvider<BluetoothDeviceNamesNotifier, List<String>>(
       BluetoothDeviceNamesNotifier.new,
     );
+
+// ============================================================================
+// 蓝牙兼容模式 Provider
+// ============================================================================
+
+/// 蓝牙兼容模式 Notifier
+class BluetoothCompatModeNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    _load();
+    return false;
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      state = prefs.getBluetoothCompatMode();
+    } catch (_) {
+      state = false;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      await prefs.setBluetoothCompatMode(enabled);
+    } catch (_) {}
+  }
+}
+
+/// 蓝牙兼容模式 Provider
+final bluetoothCompatModeProvider =
+    NotifierProvider<BluetoothCompatModeNotifier, bool>(
+      BluetoothCompatModeNotifier.new,
+    );

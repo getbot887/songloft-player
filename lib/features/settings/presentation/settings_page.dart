@@ -478,6 +478,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
           ],
+          // 兼容模式开关（非关闭模式时显示）
+          if (currentMode != BluetoothLyricsMode.off) ...[
+            const Divider(height: 1),
+            SwitchListTile(
+              title: const Text('兼容模式'),
+              subtitle: const Text('用歌词替换歌名显示，适用于不支持歌词字段的车机'),
+              value: ref.watch(bluetoothCompatModeProvider),
+              onChanged: (value) {
+                ref.read(bluetoothCompatModeProvider.notifier).setEnabled(value);
+              },
+            ),
+          ],
         ],
       ),
     );

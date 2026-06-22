@@ -190,7 +190,7 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
   }
 
   /// 发送歌词到蓝牙
-  void _sendLyricsToBluetooth() {
+  void _sendLyricsToBluetooth() async {
     final song = ref.read(playerStateProvider).currentSong;
     if (song == null) return;
 
@@ -198,10 +198,17 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
         ? state.lyrics[state.currentIndex].text
         : '';
 
+    // 读取兼容模式设置
+    final prefs = await ref.read(appPreferencesProvider.future);
+    final compatMode = prefs.getBluetoothCompatMode();
+
+    _log.log('BTLyrics', '发送歌词: "$lyrics", compatMode=$compatMode');
+
     _btLyrics.updateLyrics(
       lyrics: lyrics,
       title: song.title,
       artist: song.artist ?? '',
+      compatMode: compatMode,
     );
   }
 }

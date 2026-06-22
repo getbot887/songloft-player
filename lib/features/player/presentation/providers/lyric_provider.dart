@@ -126,10 +126,13 @@ class LyricNotifier extends Notifier<LyricState> {
           ? state.lyrics[state.currentIndex].text
           : '';
 
+      final compatMode = prefs.getBluetoothCompatMode();
+
       _btLyrics.updateLyrics(
         lyrics: lyrics,
         title: song.title,
         artist: song.artist ?? '',
+        compatMode: compatMode,
       );
     } catch (e) {
       debugPrint('[LyricProvider] 蓝牙歌词推送失败: $e');
