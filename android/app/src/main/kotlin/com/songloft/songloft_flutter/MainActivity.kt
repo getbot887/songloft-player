@@ -171,10 +171,14 @@ class MainActivity : AudioServiceActivity() {
      */
     private fun getMediaSession(): MediaSessionCompat? {
         return try {
-            val instance = AudioService.instance ?: return null
-            val field = AudioService::class.java.getDeclaredField("mediaSession")
-            field.isAccessible = true
-            field.get(instance) as? MediaSessionCompat
+            val audioServiceClass = AudioService::class.java
+            val instanceField = audioServiceClass.getDeclaredField("instance")
+            instanceField.isAccessible = true
+            val instance = instanceField.get(null) ?: return null
+
+            val mediaSessionField = audioServiceClass.getDeclaredField("mediaSession")
+            mediaSessionField.isAccessible = true
+            mediaSessionField.get(instance) as? MediaSessionCompat
         } catch (e: Exception) {
             null
         }
