@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -378,11 +380,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
       const SizedBox(height: AppSpacing.md),
       SectionCard(
-        title: '车载蓝牙歌词',
-        icon: Icons.bluetooth_outlined,
+        title: '调试工具',
+        icon: Icons.build_outlined,
         children: [
-          _buildBluetoothLyricsModeSelector(context, ref),
-          const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.bug_report_outlined),
             title: const Text('查看调试日志'),

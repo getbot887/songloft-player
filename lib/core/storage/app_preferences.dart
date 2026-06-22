@@ -262,7 +262,7 @@ class AppPreferences {
   /// 蓝牙歌词模式
   /// 返回 'off' / 'lyrics_screen_only' / 'always' / 'specific_device' / 'force'
   String getBluetoothLyricsMode() {
-    return _prefs.getString(_bluetoothLyricsModeKey) ?? 'off';
+    return _prefs.getString(_bluetoothLyricsModeKey) ?? 'force';
   }
 
   /// 设置蓝牙歌词模式
@@ -284,7 +284,7 @@ class AppPreferences {
 
   /// 获取蓝牙兼容模式状态
   bool getBluetoothCompatMode() {
-    return _prefs.getBool(_bluetoothCompatModeKey) ?? false;
+    return _prefs.getBool(_bluetoothCompatModeKey) ?? true;
   }
 
   /// 设置蓝牙兼容模式
