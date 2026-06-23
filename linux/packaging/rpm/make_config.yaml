@@ -1,0 +1,19 @@
+display_name: Songloft
+icon: assets/icons/app_icon.png
+summary: Self-hosted music server with cross-platform client
+group: Applications/Multimedia
+vendor: Songloft
+packager: Songloft Team
+packagerEmail: dev@songloft.org
+license: MIT
+url: https://github.com/songloft-org/songloft
+keywords:
+  - Music
+  - Player
+  - Self-hosted
+generic_name: Music Player
+categories:
+  - Audio
+  - Music
+  - Player
+startup_notify: true

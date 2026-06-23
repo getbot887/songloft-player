@@ -1,0 +1,283 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../shared/models/song.dart';
+import '../lyric_adjust_page.dart';
+import '../providers/lyric_provider.dart';
+
+/// 歌词显示组件
+///
+/// 从 [lyricStateProvider] 消费歌词状态，自动滚动到当前行并高亮显示。
+/// 用户手动滚动时暂停自动滚动，几秒后自动恢复。
+/// 点击歌词行可跳转到对应时间点播放。
+///
+/// 当 [editable] 为 true 且 [song] 是本地歌曲时，右上角显示「调整」按钮，
+/// 点击进入 LyricAdjustPage 编辑歌词时间戳。保存后会自动重新拉取歌词。
+class LyricsView extends ConsumerStatefulWidget {
+  /// 当前播放位置（仍需接收，用于歌词行点击 seek）
+  final Duration currentPosition;
+
+  /// 点击歌词行时的回调，传入被点击行的时间点
+  final ValueChanged<Duration>? onSeek;
+
+  /// 关联的歌曲对象。仅当 [editable] 为 true 时用于决定是否展示「调整」按钮。
+  final Song? song;
+
+  /// 是否允许编辑歌词。即使为 true，也只有 song.type == 'local' 才会显示按钮。
+  final bool editable;
+
+  const LyricsView({
+    super.key,
+    required this.currentPosition,
+    this.onSeek,
+    this.song,
+    this.editable = false,
+  });
+
+  @override
+  ConsumerState<LyricsView> createState() => _LyricsViewState();
+}
+
+class _LyricsViewState extends ConsumerState<LyricsView> {
+  final ScrollController _scrollController = ScrollController();
+
+  bool _isUserScrolling = false;
+  Timer? _resumeTimer;
+  int _lastScrolledIndex = -1;
+
+  static const double _lineHeight = 48.0;
+  static const Duration _resumeDelay = Duration(seconds: 3);
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _resumeTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToLine(int index) {
+    if (!_scrollController.hasClients) return;
+
+    final targetOffset = index * _lineHeight;
+    final clampedOffset = targetOffset.clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+
+    _scrollController.animateTo(
+      clampedOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.isScrollingNotifier.value) {
+      _onUserScrollStart();
+    }
+  }
+
+  void _onUserScrollStart() {
+    _isUserScrolling = true;
+    _resumeTimer?.cancel();
+    _resumeTimer = Timer(_resumeDelay, _onResumeAutoScroll);
+  }
+
+  void _onResumeAutoScroll() {
+    _isUserScrolling = false;
+    final lyricState = ref.read(lyricStateProvider);
+    if (lyricState.currentIndex >= 0) {
+      _scrollToLine(lyricState.currentIndex);
+    }
+  }
+
+  bool get _shouldShowEditButton {
+    if (!widget.editable) return false;
+    final s = widget.song;
+    if (s == null || s.type != 'local') return false;
+    final lyricState = ref.read(lyricStateProvider);
+    return lyricState.hasLyrics && !lyricState.isLoading && !lyricState.loadFailed;
+  }
+
+  Future<void> _openAdjustPage() async {
+    final song = widget.song;
+    final lyricState = ref.read(lyricStateProvider);
+    final lyricText = lyricState.rawLyricText;
+    if (song == null || lyricText == null || lyricText.isEmpty) return;
+
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LyricAdjustPage(
+          song: song,
+          originalLyric: lyricText,
+        ),
+      ),
+    );
+
+    if (saved == true && mounted) {
+      ref.read(lyricStateProvider.notifier).invalidate();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lyricState = ref.watch(lyricStateProvider);
+
+    if (lyricState.isLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '正在加载歌词...',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.6,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (lyricState.loadFailed) {
+      return Center(
+        child: Text(
+          '歌词加载失败',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+          ),
+        ),
+      );
+    }
+
+    if (!lyricState.hasLyrics) {
+      return Center(
+        child: Text(
+          '暂无歌词',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+          ),
+        ),
+      );
+    }
+
+    // 当行索引变化时自动滚动
+    final currentIndex = lyricState.currentIndex;
+    if (currentIndex != _lastScrolledIndex && !_isUserScrolling && currentIndex >= 0) {
+      _lastScrolledIndex = currentIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isUserScrolling) {
+          _scrollToLine(currentIndex);
+        }
+      });
+    }
+
+    final lyrics = lyricState.lyrics;
+
+    final body = LayoutBuilder(
+      builder: (context, constraints) {
+        final verticalPadding = ((constraints.maxHeight - _lineHeight) / 2)
+            .clamp(0.0, double.infinity);
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollStartNotification) {
+              if (notification.dragDetails != null) {
+                _onUserScrollStart();
+              }
+            }
+            return false;
+          },
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: EdgeInsets.symmetric(
+              vertical: verticalPadding,
+              horizontal: 24,
+            ),
+            itemCount: lyrics.length,
+            itemBuilder: (context, index) {
+              final lyric = lyrics[index];
+              final isCurrent = index == currentIndex;
+
+              return Semantics(
+                button: true,
+                label: '跳转到此歌词位置',
+                child: GestureDetector(
+                  onTap: () {
+                    if (widget.onSeek != null) {
+                      widget.onSeek!(lyric.time);
+                      _isUserScrolling = false;
+                      _resumeTimer?.cancel();
+                    }
+                  },
+                  child: Container(
+                  height: _lineHeight,
+                  alignment: Alignment.center,
+                  child: Text(
+                    lyric.text.isEmpty ? '...' : lyric.text,
+                    style: TextStyle(
+                      fontSize: isCurrent ? 18 : 15,
+                      fontWeight:
+                          isCurrent ? FontWeight.bold : FontWeight.normal,
+                      color:
+                          isCurrent
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    if (!_shouldShowEditButton) return body;
+
+    return Stack(
+      children: [
+        Positioned.fill(child: body),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: Material(
+            color: Colors.transparent,
+            child: IconButton(
+              icon: const Icon(Icons.tune, size: 22),
+              tooltip: '调整歌词',
+              color: theme.colorScheme.primary,
+              onPressed: _openAdjustPage,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

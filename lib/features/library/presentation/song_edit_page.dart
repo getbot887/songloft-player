@@ -1,0 +1,429 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../config/constants.dart';
+import '../../../core/utils/url_helper.dart';
+import '../../../shared/models/song.dart';
+import '../../../shared/utils/responsive_snackbar.dart';
+import 'providers/songs_provider.dart';
+
+/// 编辑/添加网络歌曲或电台的页面
+class SongEditPage extends ConsumerStatefulWidget {
+  final Song? song;
+  final String songType; // 'remote' 或 'radio'
+
+  const SongEditPage({super.key, this.song, required this.songType});
+
+  @override
+  ConsumerState<SongEditPage> createState() => _SongEditPageState();
+}
+
+class _SongEditPageState extends ConsumerState<SongEditPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _titleController;
+  late final TextEditingController _artistController;
+  late final TextEditingController _albumController;
+  late final TextEditingController _urlController;
+  late final TextEditingController _coverUrlController;
+  late final TextEditingController _durationController;
+  late final TextEditingController _lyricUrlController;
+  bool _isSubmitting = false;
+
+  bool get isEditMode => widget.song != null;
+  bool get isRadio => widget.songType == AppConstants.songTypeRadio;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.song?.title ?? '');
+    _artistController = TextEditingController(text: widget.song?.artist ?? '');
+    _albumController = TextEditingController(text: widget.song?.album ?? '');
+    _urlController = TextEditingController(
+      text: widget.song?.sourceUrl ?? widget.song?.url ?? '',
+    );
+    _coverUrlController = TextEditingController(
+      text: widget.song?.sourceCoverUrl ?? '',
+    );
+    _durationController = TextEditingController(
+      text: widget.song?.duration.toStringAsFixed(0) ?? '',
+    );
+    _lyricUrlController = TextEditingController(
+      text: widget.song?.lyricRemoteUrl ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _artistController.dispose();
+    _albumController.dispose();
+    _urlController.dispose();
+    _coverUrlController.dispose();
+    _durationController.dispose();
+    _lyricUrlController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          isEditMode
+              ? (isRadio ? '编辑电台' : '编辑网络歌曲')
+              : (isRadio ? '添加电台' : '添加网络歌曲'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isSubmitting ? null : _onSubmit,
+            child:
+                _isSubmitting
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Text('保存'),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 短域 URL 只读信息区（仅编辑模式）
+              if (isEditMode) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '服务端端点（只读）',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildReadOnlyUrlRow('播放', widget.song!.url),
+                        if (widget.song!.coverUrl != null &&
+                            widget.song!.coverUrl!.isNotEmpty)
+                          _buildReadOnlyUrlRow('封面', widget.song!.coverUrl!),
+                        if (widget.song!.lyricUrl != null &&
+                            widget.song!.lyricUrl!.isNotEmpty)
+                          _buildReadOnlyUrlRow('歌词', widget.song!.lyricUrl!),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 标题
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: '标题 *',
+                  hintText: '请输入标题',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return '请输入标题';
+                  }
+                  return null;
+                },
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+
+              // 艺术家
+              TextFormField(
+                controller: _artistController,
+                decoration: const InputDecoration(
+                  labelText: '艺术家',
+                  hintText: '请输入艺术家',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+
+              // 专辑（仅网络歌曲）
+              if (!isRadio) ...[
+                TextFormField(
+                  controller: _albumController,
+                  decoration: const InputDecoration(
+                    labelText: '专辑',
+                    hintText: '请输入专辑',
+                    border: OutlineInputBorder(),
+                  ),
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // URL
+              TextFormField(
+                controller: _urlController,
+                decoration: InputDecoration(
+                  labelText: isEditMode ? '源音频 URL *' : 'URL *',
+                  hintText: '请输入音频链接',
+                  border: const OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return '请输入 URL';
+                  }
+                  final uri = Uri.tryParse(value);
+                  if (uri == null || !uri.hasScheme) {
+                    return '请输入有效的 URL';
+                  }
+                  return null;
+                },
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+
+              // 封面 URL
+              TextFormField(
+                controller: _coverUrlController,
+                decoration: InputDecoration(
+                  labelText: isEditMode ? '源封面 URL' : '封面 URL',
+                  hintText: '请输入封面图片链接',
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+
+              // 时长（仅网络歌曲）
+              if (!isRadio) ...[
+                TextFormField(
+                  controller: _durationController,
+                  decoration: const InputDecoration(
+                    labelText: '时长（秒）',
+                    hintText: '请输入时长',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 歌词 URL（仅网络歌曲）
+              if (!isRadio) ...[
+                TextFormField(
+                  controller: _lyricUrlController,
+                  decoration: InputDecoration(
+                    labelText: isEditMode ? '歌词远程 URL' : '歌词 URL',
+                    hintText: '请输入歌词接口链接',
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 封面预览
+              Builder(
+                builder: (context) {
+                  final previewUrl = isEditMode
+                      ? (widget.song?.coverUrl ?? '')
+                      : _coverUrlController.text;
+                  if (previewUrl.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    children: [
+                      const Text('封面预览：'),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: ExcludeSemantics(
+                            child: Image.network(
+                              UrlHelper.buildCoverUrl(previewUrl),
+                              width: 150,
+                              height: 150,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (_, _, _) => Container(
+                                    width: 150,
+                                    height: 150,
+                                    color: Colors.grey[300],
+                                    child: const Icon(
+                                      Icons.broken_image,
+                                      size: 48,
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyUrlRow(String label, String? url) {
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 40,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              url,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy, size: 18),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url));
+              ResponsiveSnackBar.show(context, message: '已复制');
+            },
+            tooltip: '复制',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final repository = ref.read(songsRepositoryProvider);
+
+      if (isEditMode) {
+        // 更新歌曲
+        await repository.updateSong(
+          widget.song!.id,
+          title: _titleController.text.trim(),
+          artist:
+              _artistController.text.trim().isEmpty
+                  ? null
+                  : _artistController.text.trim(),
+          album:
+              isRadio
+                  ? null
+                  : (_albumController.text.trim().isEmpty
+                      ? null
+                      : _albumController.text.trim()),
+          url: _urlController.text.trim(),
+          coverUrl:
+              _coverUrlController.text.trim().isEmpty
+                  ? null
+                  : _coverUrlController.text.trim(),
+          duration:
+              isRadio ? null : (double.tryParse(_durationController.text)),
+          isLive: null,
+        );
+
+        // 歌词 URL 变化时单独更新
+        if (!isRadio) {
+          final newLyricUrl = _lyricUrlController.text.trim();
+          final oldLyricUrl = widget.song?.lyricRemoteUrl ?? '';
+          if (newLyricUrl != oldLyricUrl) {
+            if (newLyricUrl.isEmpty) {
+              await repository.updateSongLyrics(
+                widget.song!.id,
+                lyricSource: '',
+                lyric: '',
+              );
+            } else {
+              await repository.updateSongLyrics(
+                widget.song!.id,
+                lyricSource: 'url',
+                lyricRemoteUrl: newLyricUrl,
+              );
+            }
+          }
+        }
+      } else if (isRadio) {
+        // 创建电台
+        await repository.createRadioSong(
+          title: _titleController.text.trim(),
+          artist:
+              _artistController.text.trim().isEmpty
+                  ? null
+                  : _artistController.text.trim(),
+          url: _urlController.text.trim(),
+          coverUrl:
+              _coverUrlController.text.trim().isEmpty
+                  ? null
+                  : _coverUrlController.text.trim(),
+        );
+      } else {
+        // 创建网络歌曲
+        await repository.createRemoteSong(
+          title: _titleController.text.trim(),
+          artist:
+              _artistController.text.trim().isEmpty
+                  ? null
+                  : _artistController.text.trim(),
+          album:
+              _albumController.text.trim().isEmpty
+                  ? null
+                  : _albumController.text.trim(),
+          url: _urlController.text.trim(),
+          coverUrl:
+              _coverUrlController.text.trim().isEmpty
+                  ? null
+                  : _coverUrlController.text.trim(),
+          duration: double.tryParse(_durationController.text),
+          lyricRemoteUrl:
+              _lyricUrlController.text.trim().isEmpty
+                  ? null
+                  : _lyricUrlController.text.trim(),
+        );
+      }
+
+      if (mounted) {
+        ResponsiveSnackBar.show(context, message: isEditMode ? '保存成功' : '添加成功');
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ResponsiveSnackBar.showError(context, message: '操作失败: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+}
