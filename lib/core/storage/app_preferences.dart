@@ -19,10 +19,7 @@ class AppPreferences {
   static const _currentIndexKey = 'player_current_index';
   static const _positionMsKey = 'player_position_ms';
   static const _sourcePlaylistIdKey = 'player_source_playlist_id';
-  static const _bluetoothLyricsModeKey = 'bluetooth_lyrics_mode';
-  static const _bluetoothDeviceNamesKey = 'bluetooth_device_names';
   static const _bluetoothCompatModeKey = 'bluetooth_compat_mode';
-  static const _debugLogEnabledKey = 'debug_log_enabled';
 
   final SharedPreferences _prefs;
 
@@ -260,29 +257,6 @@ class AppPreferences {
     await _prefs.remove(_sourcePlaylistIdKey);
   }
 
-  /// 蓝牙歌词模式
-  /// 返回 'off' / 'lyrics_screen_only' / 'always' / 'specific_device' / 'force'
-  String getBluetoothLyricsMode() {
-    return _prefs.getString(_bluetoothLyricsModeKey) ?? 'force';
-  }
-
-  /// 设置蓝牙歌词模式
-  Future<bool> setBluetoothLyricsMode(String mode) {
-    return _prefs.setString(_bluetoothLyricsModeKey, mode);
-  }
-
-  /// 蓝牙设备名称列表（逗号分隔），仅 specific_device 模式使用
-  List<String> getBluetoothDeviceNames() {
-    final raw = _prefs.getString(_bluetoothDeviceNamesKey);
-    if (raw == null || raw.isEmpty) return const [];
-    return raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
-  }
-
-  /// 设置蓝牙设备名称列表
-  Future<bool> setBluetoothDeviceNames(List<String> names) {
-    return _prefs.setString(_bluetoothDeviceNamesKey, names.join(','));
-  }
-
   /// 获取蓝牙兼容模式状态
   bool getBluetoothCompatMode() {
     return _prefs.getBool(_bluetoothCompatModeKey) ?? true;
@@ -291,16 +265,6 @@ class AppPreferences {
   /// 设置蓝牙兼容模式
   Future<bool> setBluetoothCompatMode(bool enabled) {
     return _prefs.setBool(_bluetoothCompatModeKey, enabled);
-  }
-
-  /// 获取调试日志开关状态
-  bool getDebugLogEnabled() {
-    return _prefs.getBool(_debugLogEnabledKey) ?? true;
-  }
-
-  /// 设置调试日志开关
-  Future<bool> setDebugLogEnabled(bool enabled) {
-    return _prefs.setBool(_debugLogEnabledKey, enabled);
   }
 
   /// 清除所有偏好设置

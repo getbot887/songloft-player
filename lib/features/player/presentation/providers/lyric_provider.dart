@@ -2,12 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/platform/bluetooth_detection_service.dart';
-import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/platform/live_activity_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
 import '../../../../core/utils/url_helper.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/lyric_parser.dart';
 import 'player_provider.dart';
 
@@ -69,7 +66,6 @@ final lyricStateProvider = NotifierProvider<LyricNotifier, LyricState>(
 
 class LyricNotifier extends Notifier<LyricState> {
   String? _lastLoadedUrl;
-  final BluetoothLyricsService _btLyrics = BluetoothLyricsService();
 
   @override
   LyricState build() {
@@ -99,49 +95,6 @@ class LyricNotifier extends Notifier<LyricState> {
         state.currentLyricText,
         state.nextLyricText,
       );
-      // 方案 A：歌词页内推送蓝牙歌词
-      _pushBluetoothLyrics();
-    }
-  }
-
-  /// 方案 A：在歌词界面内推送蓝牙歌词（模式为 lyrics_screen_only 时激活）
-  void _pushBluetoothLyrics() async {
-    try {
-      final prefs = await ref.read(appPreferencesProvider.future);
-      final mode = prefs.getBluetoothLyricsMode();
-      if (mode != BluetoothLyricsMode.lyricsScreenOnly) return;
-
-      final btDetection = BluetoothDetectionService();
-      final shouldPush = await btDetection.shouldPushLyrics(
-        mode: mode,
-        deviceNames: const [],
-        isLyricsScreenOpen: true,
-      );
-      if (!shouldPush) return;
-
-      final song = ref.read(playerStateProvider).currentSong;
-      if (song == null) return;
-
-      final lyrics = state.currentIndex >= 0 && state.currentIndex < state.lyrics.length
-          ? state.lyrics[state.currentIndex].text
-          : '';
-
-      final nextIndex = state.currentIndex + 1;
-      final nextLyrics = nextIndex >= 0 && nextIndex < state.lyrics.length
-          ? state.lyrics[nextIndex].text
-          : '';
-
-      final compatMode = prefs.getBluetoothCompatMode();
-
-      _btLyrics.updateLyrics(
-        lyrics: lyrics,
-        nextLyrics: nextLyrics,
-        title: song.title,
-        artist: song.artist ?? '',
-        compatMode: compatMode,
-      );
-    } catch (e) {
-      debugPrint('[LyricProvider] 蓝牙歌词推送失败: $e');
     }
   }
 

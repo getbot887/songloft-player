@@ -753,74 +753,6 @@ final durationRefreshProvider =
     );
 
 // ============================================================================
-// 蓝牙歌词模式 Provider (客户端本地偏好)
-// ============================================================================
-
-/// 蓝牙歌词模式 Notifier
-class BluetoothLyricsModeNotifier extends Notifier<String> {
-  @override
-  String build() {
-    _load();
-    return 'off';
-  }
-
-  Future<void> _load() async {
-    try {
-      final prefs = await ref.read(appPreferencesProvider.future);
-      state = prefs.getBluetoothLyricsMode();
-    } catch (_) {
-      state = 'off';
-    }
-  }
-
-  Future<void> setMode(String mode) async {
-    state = mode;
-    try {
-      final prefs = await ref.read(appPreferencesProvider.future);
-      await prefs.setBluetoothLyricsMode(mode);
-    } catch (_) {}
-  }
-}
-
-/// 蓝牙歌词模式 Provider
-final bluetoothLyricsModeProvider =
-    NotifierProvider<BluetoothLyricsModeNotifier, String>(
-      BluetoothLyricsModeNotifier.new,
-    );
-
-/// 蓝牙设备名称 Notifier
-class BluetoothDeviceNamesNotifier extends Notifier<List<String>> {
-  @override
-  List<String> build() {
-    _load();
-    return const [];
-  }
-
-  Future<void> _load() async {
-    try {
-      final prefs = await ref.read(appPreferencesProvider.future);
-      state = prefs.getBluetoothDeviceNames();
-    } catch (_) {
-      state = const [];
-    }
-  }
-
-  Future<void> setNames(List<String> names) async {
-    state = names;
-    try {
-      final prefs = await ref.read(appPreferencesProvider.future);
-      await prefs.setBluetoothDeviceNames(names);
-    } catch (_) {}
-  }
-}
-
-/// 蓝牙设备名称 Provider
-final bluetoothDeviceNamesProvider =
-    NotifierProvider<BluetoothDeviceNamesNotifier, List<String>>(
-      BluetoothDeviceNamesNotifier.new,
-    );
-
-// ============================================================================
 // 蓝牙兼容模式 Provider
 // ============================================================================
 
@@ -829,7 +761,7 @@ class BluetoothCompatModeNotifier extends Notifier<bool> {
   @override
   bool build() {
     _load();
-    return false;
+    return true;
   }
 
   Future<void> _load() async {
@@ -837,7 +769,7 @@ class BluetoothCompatModeNotifier extends Notifier<bool> {
       final prefs = await ref.read(appPreferencesProvider.future);
       state = prefs.getBluetoothCompatMode();
     } catch (_) {
-      state = false;
+      state = true;
     }
   }
 
@@ -854,40 +786,4 @@ class BluetoothCompatModeNotifier extends Notifier<bool> {
 final bluetoothCompatModeProvider =
     NotifierProvider<BluetoothCompatModeNotifier, bool>(
       BluetoothCompatModeNotifier.new,
-    );
-
-// ============================================================================
-// 调试日志开关 Provider
-// ============================================================================
-
-/// 调试日志开关 Notifier
-class DebugLogEnabledNotifier extends Notifier<bool> {
-  @override
-  bool build() {
-    _load();
-    return true;
-  }
-
-  Future<void> _load() async {
-    try {
-      final prefs = await ref.read(appPreferencesProvider.future);
-      state = prefs.getDebugLogEnabled();
-    } catch (_) {
-      state = true;
-    }
-  }
-
-  Future<void> setEnabled(bool enabled) async {
-    state = enabled;
-    try {
-      final prefs = await ref.read(appPreferencesProvider.future);
-      await prefs.setDebugLogEnabled(enabled);
-    } catch (_) {}
-  }
-}
-
-/// 调试日志开关 Provider
-final debugLogEnabledProvider =
-    NotifierProvider<DebugLogEnabledNotifier, bool>(
-      DebugLogEnabledNotifier.new,
     );

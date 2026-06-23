@@ -3,24 +3,19 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import '../utils/debug_log_service.dart';
-
 /// 蓝牙车载歌词服务
 ///
 /// 通过 MethodChannel 与 Android 原生层通信，
 /// 将歌词写入 MediaSession 的 MediaMetadata，
 /// 经由蓝牙 AVRCP 协议发送到车机显示屏。
 ///
-/// 支持两种模式：
-/// - 标准模式：写入 METADATA_KEY_lyrics（需车机 AVRCP 1.6+）
-/// - 兼容模式：将歌词替换歌名显示（适用于老旧车机）
+/// 兼容模式：用歌词替换歌名显示，适用于不支持歌词字段的车机。
 class BluetoothLyricsService {
   static final BluetoothLyricsService _instance = BluetoothLyricsService._();
   factory BluetoothLyricsService() => _instance;
   BluetoothLyricsService._();
 
   static const _channel = MethodChannel('com.songloft/bluetooth_lyrics');
-  final DebugLogService _log = DebugLogService();
 
   bool get _isApplicable => !kIsWeb && Platform.isAndroid;
 
@@ -44,12 +39,13 @@ class BluetoothLyricsService {
   /// 发送歌词到车机
   ///
   /// [lyrics] 当前歌词行文本
+  /// [nextLyrics] 下一行歌词文本（预告）
   /// [title] 原始歌名
   /// [artist] 原始歌手
   /// [album] 原始专辑
   /// [artUri] 封面 URL
   /// [duration] 歌曲时长（毫秒）
-  /// [compatMode] 是否使用兼容模式（障眼法）
+  /// [compatMode] 是否使用兼容模式
   Future<void> updateLyrics({
     required String lyrics,
     required String nextLyrics,
@@ -60,23 +56,16 @@ class BluetoothLyricsService {
     int duration = 0,
     bool compatMode = false,
   }) async {
-    if (!_isApplicable) {
-      _log.log('BTLyrics', '跳过: 非 Android 平台');
-      return;
-    }
+    if (!_isApplicable) return;
 
     // 兼容模式下不做过滤（需要刷新空格技巧）
     if (!compatMode && lyrics == _lastLyrics) return;
 
     _lastLyrics = lyrics;
 
-    // 兼容模式下，如果歌词为空，发送空字符串让原生端恢复歌名
-    final effectiveLyrics = lyrics;
-
     try {
-      _log.log('BTLyrics', '推送歌词: "$effectiveLyrics", title=$title, compatMode=$compatMode');
       await _channel.invokeMethod('updateLyrics', {
-        'lyrics': effectiveLyrics,
+        'lyrics': lyrics,
         'nextLyrics': nextLyrics,
         'title': title,
         'artist': artist,
@@ -85,9 +74,8 @@ class BluetoothLyricsService {
         'duration': duration,
         'compatMode': compatMode,
       });
-      _log.log('BTLyrics', '推送成功');
     } catch (e) {
-      _log.log('BTLyrics', '推送失败: $e');
+      debugPrint('[BluetoothLyrics] updateLyrics failed: $e');
     }
   }
 

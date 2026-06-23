@@ -1,5 +1,3 @@
-// ignore_for_file: unused_element
-
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -9,9 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../../../core/platform/bluetooth_detection_service.dart';
-import '../../../core/utils/debug_log_service.dart';
 
 import '../../../config/app_config.dart';
 import '../../../core/network/api_client.dart';
@@ -38,7 +33,6 @@ import 'widgets/theme_selector.dart';
 import 'widgets/frontend_upgrade_dialog.dart';
 import 'widgets/upgrade_dialog.dart';
 import 'providers/settings_provider.dart';
-import 'debug_log_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -379,144 +373,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         ],
       ),
-      const SizedBox(height: AppSpacing.md),
-      SectionCard(
-        title: '调试工具',
-        icon: Icons.build_outlined,
-        children: [
-          SwitchListTile(
-            title: const Text('调试日志'),
-            subtitle: const Text('记录蓝牙歌词推送的运行日志'),
-            value: ref.watch(debugLogEnabledProvider),
-            onChanged: (value) {
-              ref.read(debugLogEnabledProvider.notifier).setEnabled(value);
-              DebugLogService().enabled = value;
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.bug_report_outlined),
-            title: const Text('查看调试日志'),
-            subtitle: const Text('查看蓝牙歌词推送的运行日志'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const DebugLogPage(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
     ];
-  }
-
-  Widget _buildBluetoothLyricsModeSelector(BuildContext context, WidgetRef ref) {
-    final currentMode = ref.watch(bluetoothLyricsModeProvider);
-    final deviceNames = ref.watch(bluetoothDeviceNamesProvider);
-
-    return RadioGroup<String>(
-      groupValue: currentMode,
-      onChanged: (newValue) {
-        if (newValue != null) {
-          ref.read(bluetoothLyricsModeProvider.notifier).setMode(newValue);
-        }
-      },
-      child: Column(
-        children: [
-          _buildModeRadio(
-            value: BluetoothLyricsMode.off,
-            title: '关闭',
-            subtitle: '不推送蓝牙歌词',
-          ),
-          _buildModeRadio(
-            value: BluetoothLyricsMode.lyricsScreenOnly,
-            title: '仅歌词页',
-            subtitle: '打开歌词界面才推送，需蓝牙连接',
-          ),
-          _buildModeRadio(
-            value: BluetoothLyricsMode.always,
-            title: '蓝牙自动',
-            subtitle: '后台推送，需蓝牙连接',
-          ),
-          _buildModeRadio(
-            value: BluetoothLyricsMode.specificDevice,
-            title: '指定设备',
-            subtitle: '后台推送，只匹配设置的蓝牙设备',
-          ),
-          _buildModeRadio(
-            value: BluetoothLyricsMode.force,
-            title: '强制推送',
-            subtitle: '忽略蓝牙状态，始终推送',
-          ),
-          if (currentMode == BluetoothLyricsMode.specificDevice) ...[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '蓝牙设备名称',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '输入设备名称（多个用逗号分隔，模糊匹配）',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    initialValue: deviceNames.join(', '),
-                    decoration: const InputDecoration(
-                      hintText: 'Car Audio, My BMW, BT-5678',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    onChanged: (value) {
-                      final names = value
-                          .split(',')
-                          .map((s) => s.trim())
-                          .where((s) => s.isNotEmpty)
-                          .toList();
-                      ref.read(bluetoothDeviceNamesProvider.notifier).setNames(names);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-          // 兼容模式开关（非关闭模式时显示）
-          if (currentMode != BluetoothLyricsMode.off) ...[
-            const Divider(height: 1),
-            SwitchListTile(
-              title: const Text('兼容模式'),
-              subtitle: const Text('用歌词替换歌名显示，适用于不支持歌词字段的车机'),
-              value: ref.watch(bluetoothCompatModeProvider),
-              onChanged: (value) {
-                ref.read(bluetoothCompatModeProvider.notifier).setEnabled(value);
-              },
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModeRadio({
-    required String value,
-    required String title,
-    required String subtitle,
-  }) {
-    return RadioListTile<String>(
-      value: value,
-      title: Text(title),
-      subtitle: Text(subtitle),
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-    );
   }
 
   // ── 音乐库管理 ──

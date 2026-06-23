@@ -18,7 +18,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/app_config.dart';
 import 'core/audio/audio_service.dart';
 import 'core/env/tv_detector.dart';
-import 'core/platform/bluetooth_detection_service.dart';
 import 'core/platform/bluetooth_lyrics_service.dart';
 import 'core/storage/app_preferences.dart';
 import 'core/storage/secure_storage.dart';
@@ -26,7 +25,6 @@ import 'core/tracely/tracely_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/responsive.dart';
 import 'core/router/app_router.dart';
-import 'core/utils/debug_log_service.dart';
 import 'core/utils/platform_utils.dart';
 import 'core/utils/window_tray_manager.dart';
 import 'features/player/presentation/providers/bluetooth_lyrics_provider.dart';
@@ -230,15 +228,8 @@ void main(List<String> args) async {
     };
   }
 
-  // 初始化调试日志服务
-  await DebugLogService().init();
-  // 读取日志开关状态
-  final debugPrefs = await SharedPreferences.getInstance();
-  DebugLogService().enabled = debugPrefs.getBool('debug_log_enabled') ?? true;
-
-  // 初始化蓝牙检测服务（仅 Android）
+  // 初始化蓝牙歌词服务（仅 Android）
   if (!kIsWeb && Platform.isAndroid) {
-    await BluetoothDetectionService().init();
     BluetoothLyricsService().init();
   }
 
