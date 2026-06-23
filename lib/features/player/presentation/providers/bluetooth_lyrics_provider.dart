@@ -121,6 +121,11 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
 
   /// 发送歌词到蓝牙
   void _sendLyricsToBluetooth() async {
+    // 检查开关是否开启
+    final prefs = await ref.read(appPreferencesProvider.future);
+    final enabled = prefs.getBluetoothLyricsEnabled();
+    if (!enabled) return;
+
     final song = ref.read(playerStateProvider).currentSong;
     if (song == null) return;
 
@@ -135,7 +140,6 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
         : '';
 
     // 读取兼容模式设置
-    final prefs = await ref.read(appPreferencesProvider.future);
     final compatMode = prefs.getBluetoothCompatMode();
 
     _btLyrics.updateLyrics(

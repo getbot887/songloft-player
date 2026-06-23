@@ -753,6 +753,42 @@ final durationRefreshProvider =
     );
 
 // ============================================================================
+// 蓝牙车载歌词开关 Provider
+// ============================================================================
+
+/// 蓝牙车载歌词开关 Notifier
+class BluetoothLyricsEnabledNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    _load();
+    return true;
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      state = prefs.getBluetoothLyricsEnabled();
+    } catch (_) {
+      state = true;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      await prefs.setBluetoothLyricsEnabled(enabled);
+    } catch (_) {}
+  }
+}
+
+/// 蓝牙车载歌词开关 Provider
+final bluetoothLyricsEnabledProvider =
+    NotifierProvider<BluetoothLyricsEnabledNotifier, bool>(
+      BluetoothLyricsEnabledNotifier.new,
+    );
+
+// ============================================================================
 // 蓝牙兼容模式 Provider
 // ============================================================================
 

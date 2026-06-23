@@ -373,6 +373,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         ],
       ),
+      const SizedBox(height: AppSpacing.md),
+      SectionCard(
+        title: '车载蓝牙歌词',
+        icon: Icons.bluetooth_outlined,
+        children: [
+          SwitchListTile(
+            title: const Text('蓝牙车载歌词'),
+            subtitle: const Text('通过蓝牙在车机上显示歌词'),
+            value: ref.watch(bluetoothLyricsEnabledProvider),
+            onChanged: (value) {
+              ref.read(bluetoothLyricsEnabledProvider.notifier).setEnabled(value);
+            },
+          ),
+        ],
+      ),
     ];
   }
 

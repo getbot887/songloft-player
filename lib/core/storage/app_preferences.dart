@@ -19,6 +19,7 @@ class AppPreferences {
   static const _currentIndexKey = 'player_current_index';
   static const _positionMsKey = 'player_position_ms';
   static const _sourcePlaylistIdKey = 'player_source_playlist_id';
+  static const _bluetoothLyricsEnabledKey = 'bluetooth_lyrics_enabled';
   static const _bluetoothCompatModeKey = 'bluetooth_compat_mode';
 
   final SharedPreferences _prefs;
@@ -255,6 +256,16 @@ class AppPreferences {
     await _prefs.remove(_currentIndexKey);
     await _prefs.remove(_positionMsKey);
     await _prefs.remove(_sourcePlaylistIdKey);
+  }
+
+  /// 获取蓝牙车载歌词开关状态
+  bool getBluetoothLyricsEnabled() {
+    return _prefs.getBool(_bluetoothLyricsEnabledKey) ?? true;
+  }
+
+  /// 设置蓝牙车载歌词开关
+  Future<bool> setBluetoothLyricsEnabled(bool enabled) {
+    return _prefs.setBool(_bluetoothLyricsEnabledKey, enabled);
   }
 
   /// 获取蓝牙兼容模式状态
