@@ -47,3 +47,7 @@ app.*.map.json
 .aone_copilot/
 dist/
 pubspec.lock
+
+# Release签名文件
+android/app/songloft-release.jks
+android/key.properties
