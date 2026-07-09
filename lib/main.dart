@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'dart:ui';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -18,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/app_config.dart';
 import 'core/audio/audio_service.dart';
 import 'core/env/tv_detector.dart';
+import 'core/network/trusted_cache.dart';
 import 'core/platform/bluetooth_detection_service.dart';
 import 'core/platform/bluetooth_lyrics_service.dart';
 import 'core/storage/app_preferences.dart';
@@ -235,6 +237,13 @@ void main(List<String> args) async {
   // 读取日志开关状态
   final debugPrefs = await SharedPreferences.getInstance();
   DebugLogService().enabled = debugPrefs.getBool('debug_log_enabled') ?? true;
+
+  // 设置 CachedNetworkImage 全局默认缓存管理器（带 CA 证书信任链）
+  // 解决自签证书 HTTPS 下封面图无法加载的问题
+  if (!kIsWeb) {
+    CachedNetworkImageProvider.defaultCacheManager =
+        await TrustedCacheManager.getInstance();
+  }
 
   // 初始化蓝牙检测服务（仅 Android）
   if (!kIsWeb && Platform.isAndroid) {

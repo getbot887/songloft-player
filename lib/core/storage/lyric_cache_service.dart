@@ -11,10 +11,16 @@ import 'package:path_provider/path_provider.dart';
 /// 文件名：URL 的 SHA1 hash + .lrc
 ///
 /// Web 平台不支持文件缓存，降级为纯内存缓存。
+///
+/// 缓存过期策略：文件修改时间超过 [maxAge] 视为过期，
+/// 从服务器重新拉取并更新缓存。
 class LyricCacheService {
   static final LyricCacheService _instance = LyricCacheService._();
   factory LyricCacheService() => _instance;
   LyricCacheService._();
+
+  /// 缓存最大有效期（默认 1 小时）
+  static const Duration maxAge = Duration(hours: 1);
 
   /// 内存缓存（所有平台通用，作为一级缓存）
   final Map<String, String> _memoryCache = {};
@@ -64,21 +70,29 @@ class LyricCacheService {
   }
 
   /// 获取缓存的歌词（先查内存，再查文件）
+  /// 如果文件缓存过期，返回 null 让调用方重新拉取
   Future<String?> get(String url) async {
-    // 1. 查内存缓存
+    // 1. 查内存缓存（内存缓存不过期，同进程内有效）
     final memCached = _memoryCache[url];
     if (memCached != null) return memCached;
 
     // 2. Web 平台无文件缓存
     if (kIsWeb) return null;
 
-    // 3. 查文件缓存
+    // 3. 查文件缓存，检查是否过期
     await _ensureInitialized();
     final file = _getCacheFile(url);
     if (file == null) return null;
 
     try {
       if (await file.exists()) {
+        // 检查文件修改时间是否过期
+        final stat = await file.stat();
+        final age = DateTime.now().difference(stat.modified);
+        if (age > maxAge) {
+          debugPrint('[LyricCacheService] 缓存已过期 (${age.inMinutes}min)，需要重新拉取: $url');
+          return null;
+        }
         final content = await file.readAsString();
         // 写入内存缓存
         _memoryCache[url] = content;
