@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/app_config.dart';
@@ -99,6 +103,18 @@ class AuthNotifier extends Notifier<AuthState> {
           },
         ),
       );
+
+      // 接受自签证书（非 Web 平台）
+      if (!kIsWeb) {
+        dio.httpClientAdapter = IOHttpClientAdapter(
+          createHttpClient: () {
+            final client = HttpClient();
+            client.badCertificateCallback =
+                (X509Certificate cert, String host, int port) => true;
+            return client;
+          },
+        );
+      }
 
       final authApi = AuthApi(dio: dio);
       final tokens = await authApi.login(

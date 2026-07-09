@@ -87,8 +87,54 @@ jobs:
           prerelease: true
 
       - name: Update latest tag
+        if: success()
         run: |
           git tag -f latest
           git push -f origin latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Feishu
+        if: always() && secrets.FEISHU_WEBHOOK_URL != ''
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            COLOR="green"
+            TITLE="构建成功"
+            CONTENT="版本: ${{ steps.version.outputs.version_name }}+${{ steps.version.outputs.version_code }}\nCommit: ${{ github.sha }}\n详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          else
+            COLOR="red"
+            TITLE="构建失败"
+            CONTENT="Commit: ${{ github.sha }}\n详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          curl -s -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "msg_type": "interactive",
+              "card": {
+                "header": {
+                  "title": { "tag": "plain_text", "content": "'"$TITLE"'" },
+                  "template": "'"$COLOR"'"
+                },
+                "elements": [
+                  {
+                    "tag": "markdown",
+                    "content": "**项目:** songloft-player\n**触发:** '"${{ github.event_name }}"'\n**分支:** '"${{ github.ref_name }}"'"'
+                  },
+                  {
+                    "tag": "markdown",
+                    "content": "'"${CONTENT}"'"
+                  },
+                  {
+                    "tag": "action",
+                    "actions": [
+                      {
+                        "tag": "button",
+                        "text": { "tag": "plain_text", "content": "查看详情" },
+                        "type": "primary",
+                        "url": "'"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"'"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }'
