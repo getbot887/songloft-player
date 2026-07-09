@@ -393,13 +393,10 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
       );
 
       debugPrint('[Player] SongloftAudioHandler: song url: $songUrl');
-      // Web 平台 / 电台直播流使用 AudioSource.uri（直播流无法缓存）,
-      // 其他平台普通歌曲使用 LockCachingAudioSource 实现边播边缓存
-      if (kIsWeb || song.isLive) {
-        source = ja.AudioSource.uri(Uri.parse(songUrl));
-      } else {
-        source = ja.LockCachingAudioSource(Uri.parse(songUrl));
-      }
+      // 使用 AudioSource.uri 让原生播放器（ExoPlayer）直接处理 HTTP 连接，
+      // 这样自签证书由 Android network_security_config.xml 控制，
+      // 避免 LockCachingAudioSource 内部 Dart HttpClient 不接受自签证书的问题。
+      source = ja.AudioSource.uri(Uri.parse(songUrl));
 
       // ★ 修复自动切歌时通知栏不更新问题：
       // 先更新 mediaItem，再 setAudioSource，再 play()。
