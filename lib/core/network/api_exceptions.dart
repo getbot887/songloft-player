@@ -35,6 +35,7 @@ class ApiException implements Exception {
       case DioExceptionType.cancel:
         return ApiException(message: '请求已取消');
       case DioExceptionType.unknown:
+      default:
         return NetworkException(
           message: e.message ?? '未知网络错误',
         );
