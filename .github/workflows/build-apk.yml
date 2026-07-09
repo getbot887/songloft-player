@@ -22,8 +22,20 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Decode keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/songloft-release.jks
+      - name: Setup signing
+        run: |
+          KEYSTORE_PATH="${{ github.workspace }}/songloft-release.jks"
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
+            echo "USING_SECRETS=true" >> "$GITHUB_ENV"
+          else
+            echo "No keystore secrets found, generating temporary keystore..."
+            keytool -genkey -v -keystore "$KEYSTORE_PATH" \
+              -alias songloft -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass songloft123 -keypass songloft123 \
+              -dname "CN=Songloft, OU=Dev, O=Songloft, L=Unknown, ST=Unknown, C=CN"
+            echo "USING_SECRETS=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Set dynamic version
         run: |
@@ -34,9 +46,9 @@ jobs:
       - run: flutter build apk --release --target-platform android-arm64
         env:
           ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/songloft-release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD || 'songloft123' }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS || 'songloft' }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_PASSWORD || 'songloft123' }}
 
       - name: Rename APK
         run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/songloft-arm64-v8a.apk
