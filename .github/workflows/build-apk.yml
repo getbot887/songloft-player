@@ -95,8 +95,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Notify Feishu
-        if: always() && secrets.FEISHU_WEBHOOK_URL != ''
+        if: always()
+        env:
+          FEISHU_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
         run: |
+          if [ -z "$FEISHU_URL" ]; then
+            echo "FEISHU_WEBHOOK_URL not set, skipping notification"
+            exit 0
+          fi
           if [ "${{ job.status }}" = "success" ]; then
             COLOR="green"
             TITLE="构建成功"
@@ -106,7 +112,7 @@ jobs:
             TITLE="构建失败"
             CONTENT="Commit: ${{ github.sha }}\n详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
-          curl -s -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+          curl -s -X POST "$FEISHU_URL" \
             -H "Content-Type: application/json" \
             -d '{
               "msg_type": "interactive",
