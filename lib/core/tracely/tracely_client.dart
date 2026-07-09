@@ -4,8 +4,6 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 
-import '../network/insecure_http.dart';
-
 class TracelyClient {
   final String appId;
   final String appSecret;
@@ -20,9 +18,7 @@ class TracelyClient {
           connectTimeout: const Duration(seconds: 5),
           receiveTimeout: const Duration(seconds: 5),
           headers: {'Content-Type': 'application/json'},
-        )) {
-    applyInsecureCertificate(_dio);
-  }
+        ));
 
   Map<String, String> _buildHeaders() {
     final timestamp =

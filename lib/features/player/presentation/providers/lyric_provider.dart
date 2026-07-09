@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/insecure_http.dart';
 import '../../../../core/platform/bluetooth_detection_service.dart';
 import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/platform/live_activity_service.dart';
@@ -183,7 +182,6 @@ class LyricNotifier extends Notifier<LyricState> {
     try {
       final fullUrl = UrlHelper.buildLyricUrl(lyricUrl);
       final dio = Dio();
-      applyInsecureCertificate(dio);
       final response = await dio.get<Map<String, dynamic>>(fullUrl);
 
       String lyricText = '';

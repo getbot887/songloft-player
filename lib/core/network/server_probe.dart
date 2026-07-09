@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'insecure_http.dart';
 import 'server_entry.dart';
 
 class ProbeResult {
@@ -84,7 +83,6 @@ class ServerProbe {
         headers: const {'Accept': 'application/json'},
       ),
     );
-    applyInsecureCertificate(dio);
     try {
       final res = await dio.get<dynamic>('/api/v1/health');
       final ok = res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300;

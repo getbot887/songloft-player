@@ -5,8 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../network/insecure_http.dart';
-
 /// 调试日志服务
 ///
 /// 存储最近的调试日志，用于在设备上查看运行状态。
@@ -170,7 +168,6 @@ class DebugLogService {
 
     try {
       final dio = Dio();
-      applyInsecureCertificate(dio);
       final response = await dio.post(
         '$baseUrl/api/debug-logs',
         data: {
