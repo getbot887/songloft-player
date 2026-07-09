@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'server_entry.dart';
+import 'trusted_http.dart';
 
 class ProbeResult {
   final ServerEntry entry;
@@ -83,6 +84,10 @@ class ServerProbe {
         headers: const {'Accept': 'application/json'},
       ),
     );
+    // 注入内置 CA 证书信任链（非 Web 平台）
+    if (!kIsWeb) {
+      applyTrustedCertificate(dio);
+    }
     try {
       final res = await dio.get<dynamic>('/api/v1/health');
       final ok = res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300;

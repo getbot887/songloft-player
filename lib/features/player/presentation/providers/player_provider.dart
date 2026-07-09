@@ -9,6 +9,7 @@ import 'package:volume_controller/volume_controller.dart';
 
 import '../../../../core/audio/audio_service.dart';
 import '../../../../core/audio/media_browse_data_source.dart';
+import '../../../../core/network/trusted_http.dart';
 import '../../../../core/platform/live_activity_service.dart';
 import '../../../../core/storage/app_preferences.dart';
 import '../../../../core/utils/audio_format_helper.dart';
@@ -1602,6 +1603,10 @@ class PlayerNotifier extends Notifier<PlayerState> {
       // 后端 ?prefetch=1 会同步返回 202，异步跳起缓存/转码。
       // 客户端不需要下载 body，超时设得短一点即可。
       final dio = Dio();
+      // 注入内置 CA 证书信任链（非 Web 平台）
+      if (!kIsWeb) {
+        applyTrustedCertificate(dio);
+      }
       final resp = await dio.get<void>(
         prefetchUrl,
         cancelToken: _prefetchCancelToken,

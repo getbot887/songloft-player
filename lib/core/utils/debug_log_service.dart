@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../network/trusted_http.dart';
+
 /// 调试日志服务
 ///
 /// 存储最近的调试日志，用于在设备上查看运行状态。
@@ -168,6 +170,10 @@ class DebugLogService {
 
     try {
       final dio = Dio();
+      // 注入内置 CA 证书信任链（非 Web 平台）
+      if (!kIsWeb) {
+        applyTrustedCertificate(dio);
+      }
       final response = await dio.post(
         '$baseUrl/api/debug-logs',
         data: {

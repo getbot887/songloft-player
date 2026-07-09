@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/trusted_http.dart';
 import '../../../../core/platform/bluetooth_detection_service.dart';
 import '../../../../core/platform/bluetooth_lyrics_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
@@ -139,6 +140,10 @@ class BluetoothLyricsNotifier extends Notifier<BluetoothLyricsState> {
       final fullUrl = UrlHelper.buildLyricUrl(lyricUrl);
       _log.log('BTLyrics', '从网络加载歌词: $fullUrl');
       final dio = Dio();
+      // 注入内置 CA 证书信任链（非 Web 平台）
+      if (!kIsWeb) {
+        applyTrustedCertificate(dio);
+      }
       final response = await dio.get<Map<String, dynamic>>(fullUrl);
 
       String lyricText = '';

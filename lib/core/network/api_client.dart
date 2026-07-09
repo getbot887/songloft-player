@@ -7,6 +7,7 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../storage/secure_storage.dart';
 import 'auth_interceptor.dart';
 import 'base_url_provider.dart';
+import 'trusted_http.dart';
 
 /// 创建并配置 Dio 实例
 Dio createDio({
@@ -25,6 +26,11 @@ Dio createDio({
       },
     ),
   );
+
+  // 注入内置 CA 证书信任链（非 Web 平台）
+  if (!kIsWeb) {
+    applyTrustedCertificate(dio);
+  }
 
   // 添加认证拦截器
   dio.interceptors.add(
@@ -65,6 +71,11 @@ Dio createPublicDio({String? customBaseUrl}) {
       },
     ),
   );
+
+  // 注入内置 CA 证书信任链（非 Web 平台）
+  if (!kIsWeb) {
+    applyTrustedCertificate(dio);
+  }
 
   // 添加日志拦截器（仅在调试模式下）
   assert(() {

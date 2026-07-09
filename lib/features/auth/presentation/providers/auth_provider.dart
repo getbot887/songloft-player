@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/app_config.dart';
@@ -7,6 +8,7 @@ import '../../../../core/network/api_exceptions.dart';
 import '../../../../core/network/base_url_provider.dart';
 import '../../../../core/network/server_entry.dart';
 import '../../../../core/network/servers_provider.dart';
+import '../../../../core/network/trusted_http.dart';
 import '../../../../core/storage/app_preferences.dart';
 import '../../../../core/storage/secure_storage.dart';
 import '../../data/auth_api.dart';
@@ -99,6 +101,11 @@ class AuthNotifier extends Notifier<AuthState> {
           },
         ),
       );
+
+      // 注入内置 CA 证书信任链（非 Web 平台）
+      if (!kIsWeb) {
+        applyTrustedCertificate(dio);
+      }
 
       final authApi = AuthApi(dio: dio);
       final tokens = await authApi.login(

@@ -3,6 +3,9 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+
+import '../network/trusted_http.dart';
 
 class TracelyClient {
   final String appId;
@@ -18,7 +21,12 @@ class TracelyClient {
           connectTimeout: const Duration(seconds: 5),
           receiveTimeout: const Duration(seconds: 5),
           headers: {'Content-Type': 'application/json'},
-        ));
+        )) {
+    // 注入内置 CA 证书信任链（非 Web 平台）
+    if (!kIsWeb) {
+      applyTrustedCertificate(_dio);
+    }
+  }
 
   Map<String, String> _buildHeaders() {
     final timestamp =
