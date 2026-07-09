@@ -18,6 +18,7 @@ class ApiException implements Exception {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
+      case DioExceptionType.transformTimeout:
         return NetworkException(
           message: '无法连接到 ${_targetOf(e)}（连接超时）。'
               '请检查：①后端服务是否运行 ②URL 与端口是否正确 '
