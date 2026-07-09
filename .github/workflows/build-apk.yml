@@ -103,6 +103,7 @@ jobs:
             echo "FEISHU_WEBHOOK_URL not set, skipping notification"
             exit 0
           fi
+          apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1 || true
           if [ "${{ job.status }}" = "success" ]; then
             COLOR="green"
             TITLE="构建成功"
