@@ -22,8 +22,14 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Decode keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/songloft-release.jks
+      - name: Generate keystore
+        run: |
+          keytool -genkeypair -alias songloft -keyalg RSA -keysize 2048 -validity 10000 \
+            -keystore ${{ github.workspace }}/songloft-release.jks \
+            -storetype JKS \
+            -storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
+            -keypass ${{ secrets.ANDROID_KEY_PASSWORD }} \
+            -dname "CN=${{ secrets.ANDROID_KEY_ALIAS }}"
 
       - name: Set dynamic version
         run: |
