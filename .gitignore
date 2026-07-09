@@ -51,3 +51,6 @@ pubspec.lock
 # Release签名文件
 android/app/songloft-release.jks
 android/key.properties
+
+# CI Secrets 文档（包含敏感信息）
+docs/ci_secrets.md
