@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../../core/storage/audio_cache_service.dart';
 import '../../../../core/storage/lyric_cache_service.dart';
 import '../../../../core/utils/web_cache_clearer.dart' as web_cache;
 import '../../../../shared/utils/responsive_snackbar.dart';
@@ -96,6 +97,9 @@ class _CacheManagerState extends ConsumerState<CacheManager> {
   Future<void> _loadLocalCacheSize() async {
     int total = 0;
 
+    // 音频预缓存大小（audio_cache）
+    total += await AudioCacheService().getCacheSize();
+
     // 歌词缓存大小
     total += await LyricCacheService().getCacheSize();
 
@@ -168,12 +172,15 @@ class _CacheManagerState extends ConsumerState<CacheManager> {
   Future<void> _cleanLocalCache() async {
     final confirmed = await _showConfirmDialog(
       title: '清理本地缓存',
-      content: '确定要清理所有本地缓存吗？包括音频缓存、图片缓存和歌词缓存。',
+      content: '确定要清理所有本地缓存吗？包括音频预缓存、音频缓存、图片缓存和歌词缓存。',
     );
     if (confirmed != true) return;
 
     setState(() => _isCleaningLocal = true);
     try {
+      // 清理音频预缓存（audio_cache）
+      await AudioCacheService().clearCache();
+
       // 清理歌词缓存
       await LyricCacheService().clear();
 
@@ -604,7 +611,7 @@ class _CacheManagerState extends ConsumerState<CacheManager> {
         ),
         const SizedBox(height: 4),
         Text(
-          '包含音频缓存、图片缓存和歌词缓存',
+          '包含音频预缓存、音频缓存、图片缓存和歌词缓存',
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),

@@ -228,6 +228,7 @@ class MainActivity : AudioServiceActivity() {
 
             if (compatMode) {
                 // 兼容模式：歌名=当前歌词，歌手=下一行歌词，专辑=原歌名-歌手
+                // 此代码可以正常在车机上显示歌词
                 if (lyrics.isNotEmpty()) {
                     builder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, lyrics)
                     // 歌手位置显示下一行歌词（预告）

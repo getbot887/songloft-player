@@ -12,6 +12,7 @@ import '../../../../core/audio/media_browse_data_source.dart';
 import '../../../../core/network/trusted_http.dart';
 import '../../../../core/platform/live_activity_service.dart';
 import '../../../../core/storage/app_preferences.dart';
+import '../../../../core/storage/audio_cache_service.dart';
 import '../../../../core/utils/audio_format_helper.dart';
 import '../../../../core/utils/platform_utils.dart';
 import '../../../../core/network/api_client.dart';
@@ -1560,7 +1561,7 @@ class PlayerNotifier extends Notifier<PlayerState> {
     await _playAtIndex(nextIndex);
   }
 
-  /// 预拉取下一首歌曲
+  /// 预拉取下一首歌曲（后端预热 + 本地缓存）
   void _prefetchNextSong() async {
     final nextIndex = _preSelectedNextIndex;
     if (nextIndex == null) return;
@@ -1592,35 +1593,52 @@ class PlayerNotifier extends Notifier<PlayerState> {
         songFormat: nextSong.format,
         quality: quality,
       );
+
+      // 检查是否已缓存，避免重复下载
+      final cached = await AudioCacheService().getCachePath(
+        nextSong.id,
+        quality: quality,
+      );
+      if (cached != null) {
+        debugPrint('[Player] 下一首已缓存，跳过: ${nextSong.title}');
+        return;
+      }
+
+      // 1. 通知后端预热（fire-and-forget）
       final separator = songUrl.contains('?') ? '&' : '?';
       final prefetchUrl = '$songUrl${separator}prefetch=1';
-
-      debugPrint(
-        '[Player] Prefetching next song: ${nextSong.title} '
-        '(type=${nextSong.type}, format=${nextSong.format}, target=$targetFormat)',
-      );
-
-      // 后端 ?prefetch=1 会同步返回 202，异步跳起缓存/转码。
-      // 客户端不需要下载 body，超时设得短一点即可。
       final dio = Dio();
-      // 注入内置 CA 证书信任链（非 Web 平台）
       if (!kIsWeb) {
         applyTrustedCertificate(dio);
       }
-      final resp = await dio.get<void>(
-        prefetchUrl,
-        cancelToken: _prefetchCancelToken,
-        options: Options(
-          receiveTimeout: const Duration(seconds: 5),
-          sendTimeout: const Duration(seconds: 5),
-          // 202 为预期响应，其他 2xx/3xx 也允许（兼容老后端）
-          validateStatus: (status) => status != null && status < 400,
-        ),
-      );
+      unawaited(dio
+          .get<void>(
+            prefetchUrl,
+            cancelToken: _prefetchCancelToken,
+            options: Options(
+              receiveTimeout: const Duration(seconds: 5),
+              sendTimeout: const Duration(seconds: 5),
+              validateStatus: (status) => status != null && status < 400,
+            ),
+          )
+          .then((_) {})
+          .catchError((e) {
+        debugPrint('[Player] Prefetch ack failed: $e');
+      }));
 
+      // 2. 下载音频到本地缓存
       debugPrint(
-        '[Player] Prefetch ack ${resp.statusCode} for: ${nextSong.title}',
+        '[Player] 本地缓存下一首: ${nextSong.title} '
+        '(type=${nextSong.type}, format=${nextSong.format}, target=$targetFormat)',
       );
+      final cachePath = await AudioCacheService().cacheSong(
+        songUrl,
+        nextSong.id,
+        quality: quality,
+      );
+      if (cachePath != null) {
+        debugPrint('[Player] 本地缓存完成: ${nextSong.title} -> $cachePath');
+      }
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         debugPrint('[Player] Prefetch cancelled for: ${nextSong.title}');

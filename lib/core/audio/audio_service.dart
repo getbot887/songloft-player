@@ -11,6 +11,7 @@ import 'package:just_audio/just_audio.dart' as ja;
 
 import '../../features/playlist/domain/playlist.dart';
 import '../../shared/models/song.dart';
+import '../storage/audio_cache_service.dart';
 import '../utils/url_helper.dart';
 import 'media_browse_data_source.dart';
 
@@ -393,10 +394,25 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
       );
 
       debugPrint('[Player] SongloftAudioHandler: song url: $songUrl');
-      // 使用 AudioSource.uri 让原生播放器（ExoPlayer）直接处理 HTTP 连接，
-      // 这样自签证书由 Android network_security_config.xml 控制，
-      // 避免 LockCachingAudioSource 内部 Dart HttpClient 不接受自签证书的问题。
-      source = ja.AudioSource.uri(Uri.parse(songUrl));
+
+      // 优先使用本地缓存文件（预下载的下一首歌曲）
+      String? cachePath;
+      if (!kIsWeb) {
+        cachePath = await AudioCacheService().getCachePath(
+          song.id,
+          quality: quality,
+        );
+      }
+
+      if (cachePath != null) {
+        debugPrint('[Player] SongloftAudioHandler: 使用本地缓存: $cachePath');
+        source = ja.AudioSource.file(cachePath);
+      } else {
+        // 使用 AudioSource.uri 让原生播放器（ExoPlayer）直接处理 HTTP 连接，
+        // 这样自签证书由 Android network_security_config.xml 控制，
+        // 避免 LockCachingAudioSource 内部 Dart HttpClient 不接受自签证书的问题。
+        source = ja.AudioSource.uri(Uri.parse(songUrl));
+      }
 
       // ★ 修复自动切歌时通知栏不更新问题：
       // 先更新 mediaItem，再 setAudioSource，再 play()。
