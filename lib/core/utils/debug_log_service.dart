@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../network/trusted_http.dart';
 
 /// 调试日志服务
 ///
@@ -170,10 +169,8 @@ class DebugLogService {
 
     try {
       final dio = Dio();
-      // 注入内置 CA 证书信任链（非 Web 平台）
-      if (!kIsWeb) {
-        await applyTrustedCertificate(dio);
-      }
+      // 日志服务器通常使用标准证书（如 Let's Encrypt），不强制自签 CA
+      // 只有后端服务才需要 applyTrustedCertificate
       final response = await dio.post(
         '$baseUrl/api/debug-logs',
         data: {
