@@ -129,7 +129,13 @@ class MainActivity : AudioServiceActivity() {
                     result.success(getConnectedDeviceNames())
                 }
                 "getPairedDeviceNames" -> {
-                    result.success(getPairedDeviceNames())
+                    android.content.pm.PackageManager.PERMISSION_GRANTED == checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+                    if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(arrayOf(android.Manifest.permission.BLUETOOTH_CONNECT), 1001)
+                        result.success(emptyList<String>())
+                    } else {
+                        result.success(getPairedDeviceNames())
+                    }
                 }
                 else -> result.notImplemented()
             }
