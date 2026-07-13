@@ -49,13 +49,22 @@ class BluetoothDetectionService {
     try {
       // 设置回调，接收原生端的蓝牙状态变化通知
       _channel.setMethodCallHandler((call) async {
-        if (call.method == 'onBluetoothStateChanged') {
-          final connected = call.arguments as bool? ?? false;
-          if (connected != _isBluetoothConnected) {
-            _isBluetoothConnected = connected;
-            _bluetoothConnectedController.add(connected);
-            _log.log('BT', '蓝牙状态变化: ${connected ? "已连接" : "已断开"}');
-          }
+        switch (call.method) {
+          case 'onBluetoothStateChanged':
+            final connected = call.arguments as bool? ?? false;
+            if (connected != _isBluetoothConnected) {
+              _isBluetoothConnected = connected;
+              _bluetoothConnectedController.add(connected);
+              _log.log('BT', '蓝牙状态变化: ${connected ? "已连接" : "已断开"}');
+            }
+            break;
+          case 'onLog':
+            // 原生日志转发到 DebugLogService
+            final args = call.arguments as Map? ?? {};
+            final tag = args['tag'] as String? ?? 'Native';
+            final message = args['message'] as String? ?? '';
+            _log.log(tag, message);
+            break;
         }
       });
 

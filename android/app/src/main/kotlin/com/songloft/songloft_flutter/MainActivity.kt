@@ -43,10 +43,18 @@ class MainActivity : AudioServiceActivity() {
                 BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED -> {
                     val state = intent.getIntExtra(BluetoothAdapter.EXTRA_CONNECTION_STATE, BluetoothAdapter.ERROR)
                     val connected = state == BluetoothAdapter.STATE_CONNECTED
+                    val stateStr = when (state) {
+                        BluetoothAdapter.STATE_CONNECTED -> "CONNECTED"
+                        BluetoothAdapter.STATE_CONNECTING -> "CONNECTING"
+                        BluetoothAdapter.STATE_DISCONNECTED -> "DISCONNECTED"
+                        BluetoothAdapter.STATE_DISCONNECTING -> "DISCONNECTING"
+                        else -> "UNKNOWN($state)"
+                    }
+                    sendLog("BT", "蓝牙连接状态变化: $stateStr, connected=$connected")
                     btChannel?.invokeMethod("onBluetoothStateChanged", connected)
 
-                    // 蓝牙断开时恢复歌词元数据并通知 Flutter
                     if (!connected) {
+                        sendLog("BT", "蓝牙断开，恢复元数据")
                         restoreMetadata()
                         btLyricsChannel?.invokeMethod("onBluetoothDisconnected", null)
                     }
@@ -54,10 +62,11 @@ class MainActivity : AudioServiceActivity() {
                 AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED -> {
                     val state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, AudioManager.ERROR)
                     val connected = state == AudioManager.SCO_AUDIO_STATE_CONNECTED
+                    sendLog("BT", "SCO 音频状态变化: state=$state, connected=$connected")
                     btChannel?.invokeMethod("onBluetoothStateChanged", connected)
                 }
                 AudioManager.ACTION_AUDIO_BECOMING_NOISY -> {
-                    // 耳机拔出/蓝牙断开时恢复歌词元数据
+                    sendLog("BT", "AUDIO_BECOMING_NOISY 触发（耳机拔出/蓝牙断开）")
                     restoreMetadata()
                     btLyricsChannel?.invokeMethod("onBluetoothDisconnected", null)
                 }
@@ -83,6 +92,16 @@ class MainActivity : AudioServiceActivity() {
             unregisterReceiver(bluetoothReceiver)
         } catch (_: Exception) {}
         super.onDestroy()
+    }
+
+    /**
+     * 发送日志到 Flutter 端的 DebugLogService
+     */
+    private fun sendLog(tag: String, message: String) {
+        android.util.Log.d(tag, message)
+        try {
+            btChannel?.invokeMethod("onLog", mapOf("tag" to tag, "message" to message))
+        } catch (_: Exception) {}
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

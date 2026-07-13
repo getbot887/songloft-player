@@ -18,7 +18,8 @@ class _DebugLogPageState extends State<DebugLogPage> {
   String _filterTag = 'all';
   bool _isUploading = false;
 
-  static const _tags = ['all', 'AudioService', 'Player', 'BT', 'BTLyrics'];
+  static const _tags = ['all', 'other', 'BTLyrics'];
+  static const _tagLabels = {'all': '全部', 'other': '播放控制', 'BTLyrics': 'BTLyrics'};
   static const _serverUrlKey = 'debug_log_server_url';
 
   @override
@@ -84,7 +85,9 @@ class _DebugLogPageState extends State<DebugLogPage> {
   Widget build(BuildContext context) {
     final logs = _filterTag == 'all'
         ? _logService.logs
-        : _logService.getLogsByTag(_filterTag);
+        : _filterTag == 'other'
+            ? _logService.logs.where((e) => e.tag != 'BTLyrics').toList()
+            : _logService.getLogsByTag(_filterTag);
 
     return Scaffold(
       appBar: AppBar(
@@ -97,7 +100,7 @@ class _DebugLogPageState extends State<DebugLogPage> {
             itemBuilder: (_) => _tags
                 .map((tag) => PopupMenuItem(
                       value: tag,
-                      child: Text(tag == 'all' ? '全部' : tag),
+                      child: Text(_tagLabels[tag] ?? tag),
                     ))
                 .toList(),
           ),

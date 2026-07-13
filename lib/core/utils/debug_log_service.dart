@@ -10,6 +10,9 @@ import 'package:path_provider/path_provider.dart';
 ///
 /// 存储最近的调试日志，用于在设备上查看运行状态。
 /// 单例模式，内存最大存储 200 条日志，同时写入本地文件。
+///
+/// 全局拦截 debugPrint：调用 [installDebugPrintHook] 后，
+/// 所有 debugPrint('[Tag] msg') 输出会自动写入日志。
 class DebugLogService {
   static final DebugLogService _instance = DebugLogService._();
   factory DebugLogService() => _instance;
@@ -29,6 +32,9 @@ class DebugLogService {
   /// 日志文件路径
   String? _logFilePath;
 
+  /// 防止 debugPrint 拦截器递归调用自身
+  bool _isLogging = false;
+
   /// 设置日志开关
   set enabled(bool value) => _enabled = value;
 
@@ -46,6 +52,20 @@ class DebugLogService {
     }
   }
 
+  /// 拦截 debugPrint，自动将 [Tag] msg 写入日志
+  void installDebugPrintHook() {
+    final original = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      original(message, wrapWidth: wrapWidth);
+      if (message != null && !_isLogging) {
+        final match = RegExp(r'^\[(\w+)\]\s*(.*)').firstMatch(message);
+        if (match != null) {
+          log(match.group(1)!, match.group(2)!);
+        }
+      }
+    };
+  }
+
   /// 添加日志
   void log(String tag, String message) {
     // 日志开关关闭时，只输出到 debugPrint，不存储
@@ -53,6 +73,9 @@ class DebugLogService {
       debugPrint('[$tag] $message');
       return;
     }
+
+    // 防止 debugPrint 拦截器递归
+    _isLogging = true;
 
     final entry = LogEntry(
       tag: tag,
@@ -69,6 +92,8 @@ class DebugLogService {
 
     // 同时输出到 debugPrint
     debugPrint('[$tag] $message');
+
+    _isLogging = false;
 
     // 写入本地文件
     _writeToFile(entry);

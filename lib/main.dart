@@ -234,6 +234,8 @@ void main(List<String> args) async {
 
   // 初始化调试日志服务
   await DebugLogService().init();
+  // 拦截 debugPrint，自动写入日志
+  DebugLogService().installDebugPrintHook();
   // 读取日志开关状态
   final debugPrefs = await SharedPreferences.getInstance();
   DebugLogService().enabled = debugPrefs.getBool('debug_log_enabled') ?? true;
