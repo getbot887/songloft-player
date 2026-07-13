@@ -1192,21 +1192,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 : '连接 "$currentDevice" 时自动播放',
           ),
           value: currentDevice.isNotEmpty,
-          onChanged: currentDevice.isNotEmpty
-              ? (_) {
-                  ref
-                      .read(autoPlayBtDeviceProvider.notifier)
-                      .setDevice('');
-                }
-              : null,
-        ),
-        if (btDetection.isBluetoothConnected)
-          ListTile(
-            leading: const Icon(Icons.bluetooth_connected),
-            title: const Text('选择自动播放设备'),
-            subtitle: const Text('从当前已连接设备中选择'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
+          onChanged: (value) async {
+            if (value == true) {
+              // 开启：弹出设备选择
+              if (!btDetection.isBluetoothConnected) {
+                ResponsiveSnackBar.show(
+                  context,
+                  message: '请先连接蓝牙设备',
+                );
+                return;
+              }
               final names = await btDetection.getConnectedDeviceNames();
               if (!context.mounted) return;
               if (names.isEmpty) {
@@ -1222,7 +1217,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   title: const Text('选择自动播放设备'),
                   children: [
                     RadioGroup<String>(
-                      groupValue: currentDevice,
+                      groupValue: '',
                       onChanged: (v) => Navigator.pop(ctx, v),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -1244,8 +1239,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     .read(autoPlayBtDeviceProvider.notifier)
                     .setDevice(picked);
               }
-            },
-          ),
+            } else {
+              // 关闭：清除设备
+              ref
+                  .read(autoPlayBtDeviceProvider.notifier)
+                  .setDevice('');
+            }
+          },
+        ),
         if (!btDetection.isBluetoothConnected)
           const ListTile(
             leading: Icon(Icons.bluetooth_disabled),
