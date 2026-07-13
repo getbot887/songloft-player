@@ -33,6 +33,9 @@ class BluetoothDetectionService {
   /// 蓝牙连接状态流
   Stream<bool> get isBluetoothConnectedStream => _bluetoothConnectedController.stream;
 
+  /// 蓝牙连接事件回调（由 PlayerNotifier 注入，用于自动播放检查）
+  void Function(bool connected, String deviceName)? onBtConnectionChanged;
+
   /// 当前是否蓝牙连接
   bool _isBluetoothConnected = false;
   bool get isBluetoothConnected => _isBluetoothConnected;
@@ -61,9 +64,11 @@ class BluetoothDetectionService {
                 final deviceName = names.isNotEmpty ? names.first : '未知设备';
                 SongloftAudioHandler.connectedBtDevice = deviceName;
                 _log.log('BT', '蓝牙已连接: $deviceName');
+                onBtConnectionChanged?.call(true, deviceName);
               } else {
                 SongloftAudioHandler.connectedBtDevice = '无';
                 _log.log('BT', '蓝牙已断开');
+                onBtConnectionChanged?.call(false, '无');
               }
             }
             break;
@@ -81,7 +86,16 @@ class BluetoothDetectionService {
       final result = await _channel.invokeMethod<bool>('isBluetoothConnected');
       _isBluetoothConnected = result ?? false;
 
-      _log.log('BT', '初始化完成, 蓝牙: ${_isBluetoothConnected ? "已连接" : "未连接"}');
+      // 如果蓝牙已连接，查询设备名称（启动时已经连接的场景）
+      if (_isBluetoothConnected) {
+        final names = await getConnectedDeviceNames();
+        final deviceName = names.isNotEmpty ? names.first : '未知设备';
+        SongloftAudioHandler.connectedBtDevice = deviceName;
+        _log.log('BT', '初始化完成, 蓝牙已连接, 设备: $deviceName');
+      } else {
+        SongloftAudioHandler.connectedBtDevice = '无';
+        _log.log('BT', '初始化完成, 蓝牙未连接');
+      }
       _initialized = true;
     } catch (e) {
       _log.log('BT', '初始化失败: $e');

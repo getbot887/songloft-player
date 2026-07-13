@@ -10,6 +10,7 @@ import 'package:volume_controller/volume_controller.dart';
 import '../../../../core/audio/audio_service.dart';
 import '../../../../core/audio/media_browse_data_source.dart';
 import '../../../../core/network/trusted_http.dart';
+import '../../../../core/platform/bluetooth_detection_service.dart';
 import '../../../../core/platform/live_activity_service.dart';
 import '../../../../core/storage/app_preferences.dart';
 import '../../../../core/storage/audio_cache_service.dart';
@@ -62,6 +63,9 @@ class PlayerNotifier extends Notifier<PlayerState> {
 
   int _consecutiveFailures = 0;
   Song? _lastPlayedSong;
+
+  // 自动播放标记（每次蓝牙断开重置，连接时触发一次）
+  bool _autoPlayTriggered = false;
 
   // 播放状态持久化
   Timer? _saveDebounceTimer;
@@ -120,6 +124,17 @@ class PlayerNotifier extends Notifier<PlayerState> {
       await playSong(song);
     };
 
+    // 蓝牙连接事件 → 检查自动播放
+    BluetoothDetectionService().onBtConnectionChanged = (connected, deviceName) {
+      if (connected) {
+        debugPrint('[Player] 蓝牙连接事件: $deviceName，检查自动播放');
+        _autoPlayTriggered = false; // 重置标记，允许触发
+        _checkAutoPlay();
+      } else {
+        _autoPlayTriggered = false; // 蓝牙断开，重置标记
+      }
+    };
+
     _initListeners();
     _initLiveActivityListeners();
     ref.onDispose(() {
@@ -170,6 +185,8 @@ class PlayerNotifier extends Notifier<PlayerState> {
       }
       // 恢复播放队列
       await _restorePlaybackState(prefs);
+      // 检查蓝牙自动播放
+      _checkAutoPlay();
       // 触发歌词 Provider 创建，确保灵动岛能收到歌词更新
       ref.read(lyricStateProvider);
     } catch (e) {
@@ -202,6 +219,33 @@ class PlayerNotifier extends Notifier<PlayerState> {
       );
     } catch (e) {
       debugPrint('[Player] Failed to restore playback state: $e');
+    }
+  }
+
+  /// 检查是否应该自动播放（蓝牙连接到指定设备时）
+  void _checkAutoPlay() async {
+    if (_autoPlayTriggered) return; // 已触发过，跳过
+    if (state.currentSong == null) return; // 没有可播放的歌曲
+
+    final prefs = await ref.read(appPreferencesProvider.future);
+    final targetDevice = prefs.getAutoPlayBtDevice();
+    if (targetDevice.isEmpty) return; // 未配置自动播放设备
+
+    final btService = BluetoothDetectionService();
+    if (!btService.isBluetoothConnected) return; // 蓝牙未连接
+
+    final connectedNames = await btService.getConnectedDeviceNames();
+    final matched = connectedNames.any((name) =>
+        name.toLowerCase().contains(targetDevice.toLowerCase()));
+
+    if (!matched) return; // 设备名不匹配
+
+    // 检查当前是否未在播放
+    final ps = _audioHandler.processingState;
+    if (ps == ja.ProcessingState.idle || !state.isPlaying) {
+      debugPrint('[Player] 自动播放触发: 蓝牙设备 $targetDevice 已连接，开始播放');
+      _autoPlayTriggered = true;
+      await playSong(state.currentSong!);
     }
   }
 

@@ -891,3 +891,39 @@ final debugLogEnabledProvider =
     NotifierProvider<DebugLogEnabledNotifier, bool>(
       DebugLogEnabledNotifier.new,
     );
+
+// ============================================================================
+// 自动播放蓝牙设备 Provider
+// ============================================================================
+
+/// 自动播放蓝牙设备 Notifier
+class AutoPlayBtDeviceNotifier extends Notifier<String> {
+  @override
+  String build() {
+    _load();
+    return '';
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      state = prefs.getAutoPlayBtDevice();
+    } catch (_) {
+      state = '';
+    }
+  }
+
+  Future<void> setDevice(String deviceName) async {
+    state = deviceName;
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      await prefs.setAutoPlayBtDevice(deviceName);
+    } catch (_) {}
+  }
+}
+
+/// 自动播放蓝牙设备 Provider（空 = 不启用）
+final autoPlayBtDeviceProvider =
+    NotifierProvider<AutoPlayBtDeviceNotifier, String>(
+      AutoPlayBtDeviceNotifier.new,
+    );

@@ -229,6 +229,18 @@ class AppPreferences {
     return _prefs.setInt(_localCacheMaxSizeKey, maxSize);
   }
 
+  static const _autoPlayBtDeviceKey = 'auto_play_bt_device';
+
+  /// 获取自动播放蓝牙设备名（空 = 不启用）
+  String getAutoPlayBtDevice() {
+    return _prefs.getString(_autoPlayBtDeviceKey) ?? '';
+  }
+
+  /// 设置自动播放蓝牙设备名（空 = 不启用）
+  Future<bool> setAutoPlayBtDevice(String deviceName) {
+    return _prefs.setString(_autoPlayBtDeviceKey, deviceName);
+  }
+
   int getCurrentIndex() {
     return _prefs.getInt(_currentIndexKey) ?? -1;
   }
