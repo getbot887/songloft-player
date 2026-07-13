@@ -224,28 +224,46 @@ class PlayerNotifier extends Notifier<PlayerState> {
 
   /// 检查是否应该自动播放（蓝牙连接到指定设备时）
   void _checkAutoPlay() async {
-    if (_autoPlayTriggered) return; // 已触发过，跳过
-    if (state.currentSong == null) return; // 没有可播放的歌曲
+    debugPrint('[Player] _checkAutoPlay: 开始检查');
+    if (_autoPlayTriggered) {
+      debugPrint('[Player] _checkAutoPlay: 已触发过，跳过');
+      return;
+    }
+    if (state.currentSong == null) {
+      debugPrint('[Player] _checkAutoPlay: 无当前歌曲，跳过');
+      return;
+    }
 
     final prefs = await ref.read(appPreferencesProvider.future);
     final targetDevice = prefs.getAutoPlayBtDevice();
-    if (targetDevice.isEmpty) return; // 未配置自动播放设备
+    if (targetDevice.isEmpty) {
+      debugPrint('[Player] _checkAutoPlay: 未配置自动播放设备，跳过');
+      return;
+    }
+    debugPrint('[Player] _checkAutoPlay: 目标设备=$targetDevice');
 
     final btService = BluetoothDetectionService();
-    if (!btService.isBluetoothConnected) return; // 蓝牙未连接
+    debugPrint('[Player] _checkAutoPlay: btConnected=${btService.isBluetoothConnected}');
+    if (!btService.isBluetoothConnected) return;
 
     final connectedNames = await btService.getConnectedDeviceNames();
+    debugPrint('[Player] _checkAutoPlay: 已连接设备=$connectedNames');
     final matched = connectedNames.any((name) =>
         name.toLowerCase().contains(targetDevice.toLowerCase()));
+    debugPrint('[Player] _checkAutoPlay: matched=$matched');
 
-    if (!matched) return; // 设备名不匹配
+    if (!matched) return;
 
     // 检查当前是否未在播放
     final ps = _audioHandler.processingState;
-    if (ps == ja.ProcessingState.idle || !state.isPlaying) {
+    final playing = state.isPlaying;
+    debugPrint('[Player] _checkAutoPlay: processingState=$ps, isPlaying=$playing');
+    if (ps == ja.ProcessingState.idle || !playing) {
       debugPrint('[Player] 自动播放触发: 蓝牙设备 $targetDevice 已连接，开始播放');
       _autoPlayTriggered = true;
       await playSong(state.currentSong!);
+    } else {
+      debugPrint('[Player] _checkAutoPlay: 当前正在播放，跳过');
     }
   }
 
