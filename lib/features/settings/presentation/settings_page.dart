@@ -1181,77 +1181,72 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final btDetection = BluetoothDetectionService();
 
     return SectionCard(
-      title: '自动播放',
-      icon: Icons.play_circle_outline,
+      title: '蓝牙自动播放',
+      icon: Icons.bluetooth_audio,
       children: [
-        SwitchListTile(
-          title: const Text('蓝牙自动播放'),
+        ListTile(
+          leading: Icon(
+            currentDevice.isNotEmpty
+                ? Icons.bluetooth_connected
+                : Icons.bluetooth_disabled,
+          ),
+          title: const Text('选择蓝牙设备'),
           subtitle: Text(
             currentDevice.isEmpty
-                ? '关闭'
-                : '连接 "$currentDevice" 时自动播放',
+                ? '未选择，连接后不自动播放'
+                : '已选择: $currentDevice',
           ),
-          value: currentDevice.isNotEmpty,
-          onChanged: (value) async {
-            if (value == true) {
-              // 开启：弹出设备选择
-              if (!btDetection.isBluetoothConnected) {
-                ResponsiveSnackBar.show(
-                  context,
-                  message: '请先连接蓝牙设备',
-                );
-                return;
-              }
-              final names = await btDetection.getConnectedDeviceNames();
-              if (!context.mounted) return;
-              if (names.isEmpty) {
-                ResponsiveSnackBar.show(
-                  context,
-                  message: '没有已连接的蓝牙设备',
-                );
-                return;
-              }
-              final picked = await showDialog<String>(
-                context: context,
-                builder: (ctx) => SimpleDialog(
-                  title: const Text('选择自动播放设备'),
-                  children: [
-                    RadioGroup<String>(
-                      groupValue: '',
-                      onChanged: (v) => Navigator.pop(ctx, v),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: names
-                            .map(
-                              (name) => RadioListTile<String>(
-                                title: Text(name),
-                                value: name,
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ),
-                  ],
-                ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final names = await btDetection.getPairedDeviceNames();
+            if (!context.mounted) return;
+            if (names.isEmpty) {
+              ResponsiveSnackBar.show(
+                context,
+                message: '手机没有已配对的蓝牙设备',
               );
-              if (picked != null) {
-                ref
-                    .read(autoPlayBtDeviceProvider.notifier)
-                    .setDevice(picked);
-              }
-            } else {
-              // 关闭：清除设备
+              return;
+            }
+            final picked = await showDialog<String>(
+              context: context,
+              builder: (ctx) => SimpleDialog(
+                title: const Text('选择自动播放设备'),
+                children: [
+                  RadioGroup<String>(
+                    groupValue: currentDevice,
+                    onChanged: (v) => Navigator.pop(ctx, v),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: names
+                          .map(
+                            (name) => RadioListTile<String>(
+                              title: Text(name),
+                              value: name,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+            );
+            if (picked != null) {
               ref
                   .read(autoPlayBtDeviceProvider.notifier)
-                  .setDevice('');
+                  .setDevice(picked);
             }
           },
         ),
-        if (!btDetection.isBluetoothConnected)
-          const ListTile(
-            leading: Icon(Icons.bluetooth_disabled),
-            title: Text('请先连接蓝牙设备'),
-            subtitle: Text('连接后可选择自动播放设备'),
+        if (currentDevice.isNotEmpty)
+          ListTile(
+            leading: const Icon(Icons.clear),
+            title: const Text('清除选择'),
+            subtitle: const Text('关闭蓝牙自动播放'),
+            onTap: () {
+              ref
+                  .read(autoPlayBtDeviceProvider.notifier)
+                  .setDevice('');
+            },
           ),
       ],
     );

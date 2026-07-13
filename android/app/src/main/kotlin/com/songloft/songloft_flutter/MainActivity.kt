@@ -128,6 +128,9 @@ class MainActivity : AudioServiceActivity() {
                 "getConnectedDeviceNames" -> {
                     result.success(getConnectedDeviceNames())
                 }
+                "getPairedDeviceNames" -> {
+                    result.success(getPairedDeviceNames())
+                }
                 else -> result.notImplemented()
             }
         }
@@ -372,5 +375,17 @@ class MainActivity : AudioServiceActivity() {
         // 等待两个 profile 回调完成（最多 3 秒）
         try { latch.await(3, java.util.concurrent.TimeUnit.SECONDS) } catch (_: InterruptedException) {}
         return names
+    }
+
+    /**
+     * 获取手机已配对的蓝牙设备名称列表（不需要当前连接）
+     */
+    private fun getPairedDeviceNames(): List<String> {
+        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter() ?: return emptyList()
+        return try {
+            bluetoothAdapter.bondedDevices?.mapNotNull { it.name }?.filter { it.isNotEmpty() }?.distinct() ?: emptyList()
+        } catch (_: SecurityException) {
+            emptyList()
+        }
     }
 }

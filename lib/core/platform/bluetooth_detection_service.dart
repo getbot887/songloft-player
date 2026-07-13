@@ -114,6 +114,17 @@ class BluetoothDetectionService {
     }
   }
 
+  /// 获取手机已配对的蓝牙设备名称列表（不需要当前连接）
+  Future<List<String>> getPairedDeviceNames() async {
+    try {
+      final result = await _channel.invokeMethod<List>('getPairedDeviceNames');
+      return result?.cast<String>() ?? const [];
+    } catch (e) {
+      debugPrint('[BluetoothDetection] 获取已配对设备失败: $e');
+      return const [];
+    }
+  }
+
   /// 判断当前是否应该推送蓝牙歌词
   ///
   /// [mode] 模式：off / lyrics_screen_only / always / specific_device / force
