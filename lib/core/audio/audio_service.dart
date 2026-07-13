@@ -68,13 +68,14 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
     // 监听播放完成
     _player.processingStateStream.listen(
       (state) {
-        debugPrint('[AudioService] processingState 变化: $state');
+        debugPrint('[AudioService] processingState 变化: $state, '
+            'playing=${_player.playing}, position=${_player.position}');
         if (state == ja.ProcessingState.completed) {
+          debugPrint('[AudioService] ⚠️ processingState=completed，触发 onSongCompleted');
           try {
             onSongCompleted?.call();
           } catch (e) {
             debugPrint('[AudioService] onSongCompleted error: $e');
-            // 不重新抛出，避免 stream 断裂
           }
         }
       },
@@ -102,26 +103,31 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
       debugPrint('[AudioService] AudioSession configured');
       var wasPlayingBeforeInterruption = false;
       session.interruptionEventStream.listen((event) {
+        final sinceLastChange = _lastSongChangeTime != null
+            ? DateTime.now().difference(_lastSongChangeTime!).inMilliseconds
+            : -1;
         debugPrint(
-          '[AudioService] Audio interruption: type=${event.type}, begin=${event.begin}',
+          '[AudioService] Audio interruption: type=${event.type}, begin=${event.begin}, '
+          'wasPlaying=$wasPlayingBeforeInterruption, '
+          'player.playing=${_player.playing}, '
+          'sinceLastChange=${sinceLastChange}ms',
         );
         if (event.begin) {
-          // 中断开始：记录当前播放状态并暂停
           wasPlayingBeforeInterruption = _player.playing;
           if (event.type == AudioInterruptionType.pause ||
               event.type == AudioInterruptionType.unknown) {
-            // 切歌后 5 秒内忽略自动暂停（防止蓝牙误发暂停命令）
             final lastChange = _lastSongChangeTime;
             if (lastChange != null &&
                 DateTime.now().difference(lastChange).inSeconds < 5) {
               debugPrint('[AudioService] 忽略切歌期间的自动暂停');
               return;
             }
+            debugPrint('[AudioService] ⚠️ 执行中断暂停');
             _player.pause();
           }
         } else {
-          // 中断结束：如果之前正在播放，则恢复
           if (wasPlayingBeforeInterruption) {
+            debugPrint('[AudioService] 中断结束，恢复播放');
             _player.play();
           }
         }
@@ -192,7 +198,8 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> pause() {
-    debugPrint('[AudioService] ⏸️ pause() 被调用');
+    final stack = StackTrace.current.toString().split('\n').take(6).join('\n');
+    debugPrint('[AudioService] ⏸️ pause() 被调用，调用来源:\n$stack');
     return _player.pause();
   }
 
