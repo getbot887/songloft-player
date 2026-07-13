@@ -18,7 +18,7 @@ class _DebugLogPageState extends State<DebugLogPage> {
   String _filterTag = 'all';
   bool _isUploading = false;
 
-  static const _tags = ['all', 'BT', 'BTLyrics'];
+  static const _tags = ['all', 'AudioService', 'Player', 'BT', 'BTLyrics'];
   static const _serverUrlKey = 'debug_log_server_url';
 
   @override

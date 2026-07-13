@@ -172,7 +172,7 @@ class DebugLogService {
       final dio = Dio();
       // 注入内置 CA 证书信任链（非 Web 平台）
       if (!kIsWeb) {
-        applyTrustedCertificate(dio);
+        await applyTrustedCertificate(dio);
       }
       final response = await dio.post(
         '$baseUrl/api/debug-logs',
@@ -182,6 +182,7 @@ class DebugLogService {
           'platform': Platform.operatingSystem,
         },
         options: Options(
+          contentType: 'application/json',
           sendTimeout: const Duration(seconds: 30),
           receiveTimeout: const Duration(seconds: 30),
         ),
@@ -193,7 +194,7 @@ class DebugLogService {
         return '上传失败: HTTP ${response.statusCode}';
       }
     } on DioException catch (e) {
-      return '上传失败: ${e.message}';
+      return '上传失败: ${e.type} - ${e.message ?? e.error ?? "未知错误"}';
     } catch (e) {
       return '上传失败: $e';
     }
