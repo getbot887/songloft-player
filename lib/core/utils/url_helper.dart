@@ -30,7 +30,9 @@ class UrlHelper {
     final fullUrl =
         '${AppConfig.baseUrl}${AppConfig.basePath}$url${separator}access_token=$token';
 
-    debugPrint('[UrlHelper] Built resource URL: $fullUrl');
+    // 日志只保留路径，不暴露 token
+    final pathOnly = Uri.tryParse(fullUrl)?.path ?? url;
+    debugPrint('[UrlHelper] $pathOnly');
     return fullUrl;
   }
 

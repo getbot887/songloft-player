@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../audio/audio_service.dart';
 import '../utils/debug_log_service.dart';
 
 /// 蓝牙歌词模式常量
@@ -55,7 +56,15 @@ class BluetoothDetectionService {
             if (connected != _isBluetoothConnected) {
               _isBluetoothConnected = connected;
               _bluetoothConnectedController.add(connected);
-              _log.log('BT', '蓝牙状态变化: ${connected ? "已连接" : "已断开"}');
+              if (connected) {
+                final names = await getConnectedDeviceNames();
+                final deviceName = names.isNotEmpty ? names.first : '未知设备';
+                SongloftAudioHandler.connectedBtDevice = deviceName;
+                _log.log('BT', '蓝牙已连接: $deviceName');
+              } else {
+                SongloftAudioHandler.connectedBtDevice = '无';
+                _log.log('BT', '蓝牙已断开');
+              }
             }
             break;
           case 'onLog':

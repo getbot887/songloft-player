@@ -18,7 +18,7 @@ class DebugLogService {
   factory DebugLogService() => _instance;
   DebugLogService._();
 
-  static const int _maxLogs = 200;
+  static const int _maxLogs = 500;
   static const String _logFileName = 'debug_logs.txt';
 
   final Queue<LogEntry> _logs = Queue<LogEntry>();
@@ -58,9 +58,10 @@ class DebugLogService {
     debugPrint = (String? message, {int? wrapWidth}) {
       original(message, wrapWidth: wrapWidth);
       if (message != null && !_isLogging) {
-        final match = RegExp(r'^\[(\w+)\]\s*(.*)').firstMatch(message);
+        // 支持多行消息：匹配 [Tag] 后的所有内容（包括换行）
+        final match = RegExp(r'^\[(\w+)\]\s*([\s\S]*)', dotAll: true).firstMatch(message);
         if (match != null) {
-          log(match.group(1)!, match.group(2)!);
+          log(match.group(1)!, match.group(2)!.trim());
         }
       }
     };

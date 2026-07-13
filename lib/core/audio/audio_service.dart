@@ -49,6 +49,13 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
   /// 切歌时间戳，用于在切歌后短时间内忽略蓝牙误发的暂停命令
   DateTime? _lastSongChangeTime;
 
+  /// 当前连接的蓝牙设备名称（由 PlayerNotifier 设置）
+  static String connectedBtDevice = '无';
+
+  /// 上次播放状态（用于 _transformEvent 去重日志）
+  bool _lastPlaying = false;
+  ja.ProcessingState _lastProcessingState = ja.ProcessingState.idle;
+
   SongloftAudioHandler() {
     // ★ 关键：使用官方示例的 pipe 模式直接绑定 playbackState
     // 这比手动 listen + add 更可靠，直接管道连接，无中间状态丢失
@@ -167,21 +174,43 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
       speed: _player.speed,
       queueIndex: 0,
     );
-    debugPrint(
-      '[AudioService] 🔄 _transformEvent: playing=${state.playing}, '
-      'processingState=${state.processingState}, '
-      'position=${state.updatePosition.inSeconds}s, '
-      'controls=${state.controls.length}个',
-    );
+    // 只在状态变化时记录日志（playing 或 processingState 变化）
+    final playingChanged = _lastPlaying != state.playing;
+    final currentProcessing = _player.processingState;
+    final processingChanged = _lastProcessingState != currentProcessing;
+    _lastPlaying = state.playing;
+    _lastProcessingState = currentProcessing;
+
+    if (playingChanged || processingChanged) {
+      debugPrint(
+        '[AudioService] 🔄 状态变化: playing=${state.playing}, '
+        'processing=${state.processingState}, '
+        'pos=${state.updatePosition.inSeconds}s',
+      );
+    }
     return state;
   }
 
   // ====================== audio_service 必需的覆写方法 ======================
   // 官方示例：audio_service Android 端通过调用这些覆写方法来响应通知栏按钮点击
 
+  /// 分析调用堆栈，判断操作来源
+  String _analyzeSource() {
+    final frames = StackTrace.current.toString().split('\n');
+    for (final frame in frames) {
+      if (frame.contains('PlayerNotifier')) return '📱 本地UI';
+      if (frame.contains('interruptionEventStream')) return '🔊 音频中断';
+      if (frame.contains('onSongCompleted')) return '🎵 歌曲完成';
+    }
+    // 没有找到 PlayerNotifier → 来自 MediaSession（蓝牙车机/通知栏/Android Auto）
+    final device = connectedBtDevice;
+    return '🚗 蓝牙设备($device)';
+  }
+
   @override
   Future<void> play() async {
-    debugPrint('[AudioService] ▶️ play() 被调用');
+    final source = _analyzeSource();
+    debugPrint('[AudioService] ▶️ play() | 来源: $source');
     
     // 如果没有加载歌曲，尝试恢复上次播放（车机蓝牙自动播放场景）
     if (_player.audioSource == null && onPlayFromIdle != null) {
@@ -198,33 +227,37 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> pause() {
-    final stack = StackTrace.current.toString().split('\n').take(6).join('\n');
-    debugPrint('[AudioService] ⏸️ pause() 被调用，调用来源:\n$stack');
+    final source = _analyzeSource();
+    debugPrint('[AudioService] ⏸️ pause() | 来源: $source');
     return _player.pause();
   }
 
   @override
   Future<void> stop() async {
-    debugPrint('[AudioService] ⏹️ stop() 被调用');
+    final source = _analyzeSource();
+    debugPrint('[AudioService] ⏹️ stop() | 来源: $source');
     await _player.stop();
     return super.stop();
   }
 
   @override
   Future<void> seek(Duration position) {
-    debugPrint('[AudioService] ⏩ seek() 被调用: ${position.inSeconds}s');
+    final source = _analyzeSource();
+    debugPrint('[AudioService] ⏩ seek() → ${position.inSeconds}s | 来源: $source');
     return _player.seek(position);
   }
 
   @override
   Future<void> skipToNext() async {
-    debugPrint('[AudioService] ⏭️ skipToNext() 被调用');
+    final source = _analyzeSource();
+    debugPrint('[AudioService] ⏭️ skipToNext() | 来源: $source');
     onSkipToNext?.call();
   }
 
   @override
   Future<void> skipToPrevious() async {
-    debugPrint('[AudioService] ⏮️ skipToPrevious() 被调用');
+    final source = _analyzeSource();
+    debugPrint('[AudioService] ⏮️ skipToPrevious() | 来源: $source');
     onSkipToPrevious?.call();
   }
 
