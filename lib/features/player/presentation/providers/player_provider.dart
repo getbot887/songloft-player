@@ -135,6 +135,9 @@ class PlayerNotifier extends Notifier<PlayerState> {
       }
     };
 
+    // 同步蓝牙暂停保护时间到 AudioService（静态字段）
+    _loadBtPauseGuardSecs();
+
     _initListeners();
     _initLiveActivityListeners();
     ref.onDispose(() {
@@ -185,6 +188,8 @@ class PlayerNotifier extends Notifier<PlayerState> {
       }
       // 恢复播放队列
       await _restorePlaybackState(prefs);
+      // 同步蓝牙暂停保护时间
+      SongloftAudioHandler.btPauseGuardSecs = prefs.getBluetoothPauseGuardSecs();
       // 检查蓝牙自动播放
       _checkAutoPlay();
       // 触发歌词 Provider 创建，确保灵动岛能收到歌词更新
@@ -222,6 +227,14 @@ class PlayerNotifier extends Notifier<PlayerState> {
     }
   }
 
+  /// 从设置读取蓝牙暂停保护时间，同步到 AudioService
+  void _loadBtPauseGuardSecs() async {
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      SongloftAudioHandler.btPauseGuardSecs = prefs.getBluetoothPauseGuardSecs();
+    } catch (_) {}
+  }
+
   /// 检查是否应该自动播放（蓝牙连接到指定设备时）
   void _checkAutoPlay() async {
     debugPrint('[Player] _checkAutoPlay: 开始检查');
@@ -246,9 +259,10 @@ class PlayerNotifier extends Notifier<PlayerState> {
     debugPrint('[Player] _checkAutoPlay: btConnected=${btService.isBluetoothConnected}');
     if (!btService.isBluetoothConnected) return;
 
-    final connectedNames = await btService.getConnectedDeviceNames();
-    debugPrint('[Player] _checkAutoPlay: 已连接设备=$connectedNames');
-    final matched = connectedNames.any((name) =>
+    // 用已配对设备列表匹配（getConnectedDeviceNames 在部分手机返回空）
+    final pairedNames = await btService.getPairedDeviceNames();
+    debugPrint('[Player] _checkAutoPlay: 已配对设备=$pairedNames');
+    final matched = pairedNames.any((name) =>
         name.toLowerCase().contains(targetDevice.toLowerCase()));
     debugPrint('[Player] _checkAutoPlay: matched=$matched');
 

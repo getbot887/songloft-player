@@ -927,3 +927,39 @@ final autoPlayBtDeviceProvider =
     NotifierProvider<AutoPlayBtDeviceNotifier, String>(
       AutoPlayBtDeviceNotifier.new,
     );
+
+// ============================================================================
+// 蓝牙暂停保护时间 Provider
+// ============================================================================
+
+/// 蓝牙暂停保护时间 Notifier（秒）
+class BluetoothPauseGuardSecsNotifier extends Notifier<int> {
+  @override
+  int build() {
+    _load();
+    return 5;
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      state = prefs.getBluetoothPauseGuardSecs();
+    } catch (_) {
+      state = 5;
+    }
+  }
+
+  Future<void> setSecs(int secs) async {
+    state = secs;
+    try {
+      final prefs = await ref.read(appPreferencesProvider.future);
+      await prefs.setBluetoothPauseGuardSecs(secs);
+    } catch (_) {}
+  }
+}
+
+/// 蓝牙暂停保护时间 Provider（秒，默认5）
+final bluetoothPauseGuardProvider =
+    NotifierProvider<BluetoothPauseGuardSecsNotifier, int>(
+      BluetoothPauseGuardSecsNotifier.new,
+    );

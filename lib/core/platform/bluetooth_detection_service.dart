@@ -63,7 +63,8 @@ class BluetoothDetectionService {
                 final names = await getConnectedDeviceNames();
                 final deviceName = names.isNotEmpty ? names.first : '未知设备';
                 SongloftAudioHandler.connectedBtDevice = deviceName;
-                _log.log('BT', '蓝牙已连接: $deviceName');
+                final pairedNames = await getPairedDeviceNames();
+                _log.log('BT', '蓝牙已连接: $deviceName, 已连接设备=$names, 已配对设备=$pairedNames');
                 onBtConnectionChanged?.call(true, deviceName);
               } else {
                 SongloftAudioHandler.connectedBtDevice = '无';

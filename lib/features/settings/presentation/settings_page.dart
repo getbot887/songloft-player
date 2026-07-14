@@ -382,6 +382,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       const SizedBox(height: AppSpacing.md),
       _buildAutoPlayBtSection(context, ref),
       const SizedBox(height: AppSpacing.md),
+      _buildBtPauseGuardSection(context, ref),
+      const SizedBox(height: AppSpacing.md),
       SectionCard(
         title: '调试工具',
         icon: Icons.build_outlined,
@@ -1248,6 +1250,49 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   .setDevice('');
             },
           ),
+      ],
+    );
+  }
+
+  /// 蓝牙暂停保护时间设置
+  Widget _buildBtPauseGuardSection(BuildContext context, WidgetRef ref) {
+    final guardSecs = ref.watch(bluetoothPauseGuardProvider);
+
+    return SectionCard(
+      title: '蓝牙暂停保护',
+      icon: Icons.shield_outlined,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '切歌后忽略蓝牙暂停指令的时间: ${guardSecs}秒',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '车机切歌后会自动发暂停指令，此设置可在指定时间内忽略这些暂停',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              Slider(
+                value: guardSecs.toDouble(),
+                min: 1,
+                max: 15,
+                divisions: 14,
+                label: '${guardSecs}秒',
+                onChanged: (value) {
+                  ref
+                      .read(bluetoothPauseGuardProvider.notifier)
+                      .setSecs(value.round());
+                },
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

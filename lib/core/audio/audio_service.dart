@@ -52,6 +52,9 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
   /// 当前连接的蓝牙设备名称（由 PlayerNotifier 设置）
   static String connectedBtDevice = '无';
 
+  /// 蓝牙暂停保护时间（秒，由 PlayerNotifier 从设置读取后设置）
+  static int btPauseGuardSecs = 5;
+
   /// 上次播放状态（用于 _transformEvent 去重日志）
   bool _lastPlaying = false;
   ja.ProcessingState _lastProcessingState = ja.ProcessingState.idle;
@@ -229,6 +232,18 @@ class SongloftAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> pause() {
     final source = _analyzeSource();
     debugPrint('[AudioService] ⏸️ pause() | 来源: $source');
+
+    // 蓝牙车机切歌后会发 pause 指令，导致播放 2-3 秒就暂停
+    // 通过 MediaSession callback 进入的 pause（非本地UI），切歌后 N 秒内忽略
+    if (!source.contains('本地UI')) {
+      final lastChange = _lastSongChangeTime;
+      if (lastChange != null &&
+          DateTime.now().difference(lastChange).inSeconds < btPauseGuardSecs) {
+        debugPrint('[AudioService] ⚠️ 忽略切歌期间的蓝牙 pause 指令（${btPauseGuardSecs}s）');
+        return Future.value();
+      }
+    }
+
     return _player.pause();
   }
 

@@ -241,6 +241,18 @@ class AppPreferences {
     return _prefs.setString(_autoPlayBtDeviceKey, deviceName);
   }
 
+  static const _btPauseGuardSecsKey = 'bt_pause_guard_secs';
+
+  /// 获取蓝牙暂停保护时间（秒），默认 5 秒
+  int getBluetoothPauseGuardSecs() {
+    return _prefs.getInt(_btPauseGuardSecsKey) ?? 5;
+  }
+
+  /// 设置蓝牙暂停保护时间（秒）
+  Future<bool> setBluetoothPauseGuardSecs(int secs) {
+    return _prefs.setInt(_btPauseGuardSecsKey, secs);
+  }
+
   int getCurrentIndex() {
     return _prefs.getInt(_currentIndexKey) ?? -1;
   }
